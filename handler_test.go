@@ -3,6 +3,8 @@
 package graft
 
 import (
+"fmt"
+
 	"os"
 	"testing"
 	"time"
@@ -96,4 +98,15 @@ func TestErrorHandler(t *testing.T) {
 	defer os.Chmod(node.logPath, 0660)
 
 	err = errWait(t, mh.errChan)
+
+	perr, ok := err.(*os.PathError)
+	if !ok {
+		t.Fatalf("Got wrong error type")
+	}
+	if perr.Op != "open" {
+		t.Fatalf("Got wrong operation, wanted 'open', got %q", perr.Op)
+	}
+	if perr.Path != node.logPath {
+		t.Fatalf("Expected the logPath, got %\n", perr.Path)
+	}
 }
