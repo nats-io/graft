@@ -3,6 +3,8 @@ Graft
 
 A RAFT Election implementation in Go.
 
+[![Build Status](https://magnum.travis-ci.com/apcera/graft.png?token=UGjrGa8sFWGQcHSJeAvp)](https://magnum.travis-ci.com/apcera/graft)
+
 Overview
 =====
 
