@@ -3,8 +3,6 @@
 package graft
 
 import (
-"fmt"
-
 	"os"
 	"testing"
 	"time"
