@@ -8,28 +8,11 @@ import (
 	"time"
 )
 
-type stateChange struct {
-	from, to State
-}
-
-type mockHandler struct {
-	scChan  chan *stateChange
-	errChan chan error
-}
-
-func (mh *mockHandler) AsyncError(err error) {
-	mh.errChan <- err
-}
-
-func (mh *mockHandler) StateChange(from, to State) {
-	mh.scChan <- &stateChange{from, to}
-}
-
 // Dumb wait program to sync on callbacks, etc... Will timeout
-func wait(t *testing.T, ch chan *stateChange) *stateChange {
+func wait(t *testing.T, ch chan StateChange) *StateChange {
 	select {
 	case sc := <-ch:
-		return sc
+		return &sc
 	case <-time.After(MAX_ELECTION_TIMEOUT):
 		t.Fatal("Timeout waiting on state change")
 	}
@@ -50,20 +33,24 @@ func TestStateChangeHandler(t *testing.T) {
 	ci := ClusterInfo{Name: "foo", Size: 1}
 	_, rpc, log := genNodeArgs(t)
 
-	// Use mockHandler
-	mh := &mockHandler{make(chan *stateChange), make(chan error)}
+	// Use ChanHandler
+	scCh := make(chan StateChange)
+	defer close(scCh)
+	errCh := make(chan error)
+	defer close(errCh)
+	chand := NewChanHandler(make(chan StateChange), make(chan error))
 
-	node, err := New(ci, mh, rpc, log)
+	node, err := New(ci, chand, rpc, log)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 	defer node.Close()
 
-	sc := wait(t, mh.scChan)
+	sc := wait(t, scCh)
 	if sc.from != FOLLOWER && sc.to != CANDIDATE {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
-	sc = wait(t, mh.scChan)
+	sc = wait(t, scCh)
 	if sc.from != CANDIDATE && sc.to != LEADER {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
@@ -71,7 +58,7 @@ func TestStateChangeHandler(t *testing.T) {
 	// Force the leader to stepdown.
 	node.HeartBeats <- &Heartbeat{Term: 20, Leader: "new"}
 
-	sc = wait(t, mh.scChan)
+	sc = wait(t, scCh)
 	if sc.from != LEADER && sc.to != FOLLOWER {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
@@ -82,10 +69,14 @@ func TestErrorHandler(t *testing.T) {
 	ci := ClusterInfo{Name: "foo", Size: 1}
 	_, rpc, log := genNodeArgs(t)
 
-	// Use mockHandler
-	mh := &mockHandler{make(chan *stateChange), make(chan error)}
+	// Use ChanHandler
+	scCh := make(chan StateChange)
+	defer close(scCh)
+	errCh := make(chan error)
+	defer close(errCh)
+	chand := NewChanHandler(make(chan StateChange), make(chan error))
 
-	node, err := New(ci, mh, rpc, log)
+	node, err := New(ci, chand, rpc, log)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
@@ -95,7 +86,7 @@ func TestErrorHandler(t *testing.T) {
 	os.Chmod(node.logPath, 0400)
 	defer os.Chmod(node.logPath, 0660)
 
-	err = errWait(t, mh.errChan)
+	err = errWait(t, errCh)
 
 	perr, ok := err.(*os.PathError)
 	if !ok {
