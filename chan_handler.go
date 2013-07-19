@@ -11,7 +11,7 @@ type ChanHandler struct {
 	errorChan chan<- error
 }
 
-// StateChange captures to from and to States for the ChanHandler.
+// StateChange captures "from" and "to" States for the ChanHandler.
 type StateChange struct {
 	from, to State
 }

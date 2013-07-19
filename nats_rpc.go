@@ -126,7 +126,7 @@ func (rpc *NatsRpcDriver) VoteResponseCallback(vresp *VoteResponse) {
 // RequestVote is sent from the Graft node when it has become a
 // candidate.
 func (rpc *NatsRpcDriver) RequestVote(vr *VoteRequest) error {
-	// Create a new response subscription for each oustanding
+	// Create a new response subscription for each outstanding
 	// RequestVote and cancel the previous.
 	if rpc.vrespSub != nil {
 		rpc.vrespSub.Unsubscribe()
@@ -157,7 +157,7 @@ func (rpc *NatsRpcDriver) HeartBeat(hb *Heartbeat) error {
 	return rpc.ec.Publish(rpc.hbSub.Subject, hb)
 }
 
-// SendVoteResponse is called from the Graft node to responsd to a vote request.
+// SendVoteResponse is called from the Graft node to respond to a vote request.
 func (rpc *NatsRpcDriver) SendVoteResponse(id string, vresp *VoteResponse) error {
 	return rpc.ec.Publish(rpc.vrespSubject(id), vresp)
 }

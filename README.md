@@ -33,7 +33,7 @@ select {
   case sc := <- stateChangeChan:
     // Process a state change
   case err := <- errChan:
-    // Process and error, log etc.
+    // Process an error, log etc.
 }
 
 ```

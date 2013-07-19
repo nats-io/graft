@@ -86,7 +86,7 @@ func New(info ClusterInfo, handler Handler, rpc RPCDriver, logPath string) (*Nod
 		return nil, err
 	}
 
-	// Assign an Id() and start us as a FOLLOWER with no know LEADER.
+	// Assign an Id() and start us as a FOLLOWER with no known LEADER.
 	node := &Node{
 		id:            uuid.Variant4().String(),
 		info:          info,
@@ -207,7 +207,7 @@ func (n *Node) runAsLeader() {
 		// A Vote Request.
 		case vreq := <-n.VoteRequests:
 			// We will stepdown if needed. This can happen if the
-			// request is from a newer term then ours.
+			// request is from a newer term than ours.
 			if stepDown := n.handleVoteRequest(vreq); stepDown {
 				n.switchToFollower(NO_LEADER)
 				return
@@ -215,7 +215,7 @@ func (n *Node) runAsLeader() {
 
 		// Process another LEADER's heartbeat.
 		case hb := <-n.HeartBeats:
-			// If they are newer then we are we will step down.
+			// If they are newer, we will step down.
 			if stepDown := n.handleHeartBeat(hb); stepDown {
 				n.switchToFollower(hb.Leader)
 				return
@@ -276,7 +276,7 @@ func (n *Node) runAsCandidate() {
 		// A Vote Request.
 		case vreq := <-n.VoteRequests:
 			// We will stepdown if needed. This can happen if the
-			// request is from a newer term then ours.
+			// request is from a newer term than ours.
 			if stepDown := n.handleVoteRequest(vreq); stepDown {
 				n.switchToFollower(NO_LEADER)
 				return
@@ -284,7 +284,7 @@ func (n *Node) runAsCandidate() {
 
 		// Process a LEADER's heartbeat.
 		case hb := <-n.HeartBeats:
-			// If they are newer then we are we will step down.
+			// If they are newer, we will step down.
 			if stepDown := n.handleHeartBeat(hb); stepDown {
 				n.switchToFollower(hb.Leader)
 				return
