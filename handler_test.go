@@ -36,9 +36,9 @@ func TestStateChangeHandler(t *testing.T) {
 	// Use ChanHandler
 	scCh := make(chan StateChange)
 	errCh := make(chan error)
-	chand := NewChanHandler(scCh, errCh)
+	chHand := NewChanHandler(scCh, errCh)
 
-	node, err := New(ci, chand, rpc, log)
+	node, err := New(ci, chHand, rpc, log)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
@@ -70,9 +70,9 @@ func TestErrorHandler(t *testing.T) {
 	// Use ChanHandler
 	scCh := make(chan StateChange)
 	errCh := make(chan error)
-	chand := NewChanHandler(scCh, errCh)
+	chHand := NewChanHandler(scCh, errCh)
 
-	node, err := New(ci, chand, rpc, log)
+	node, err := New(ci, chHand, rpc, log)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
