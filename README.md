@@ -8,5 +8,32 @@ A RAFT Election implementation in Go.
 Overview
 =====
 
-RAFT is a consensus based algorithm that produces consistent state through replicated logs and leader elections. Continuum has several uses for an election algorithm that produces guaranteed leaders for N-wise scalability and elimination of SPOF (Single Point of Failure). In the current design, both the Health Manager and the AuthServer will utilize an elected leader.
+RAFT is a consensus based algorithm that produces consistent state through replicated logs and leader elections.
+Continuum has several uses for an election algorithm that produces guaranteed leaders for N-wise scalability and
+elimination of SPOF (Single Point of Failure). In the current design, both the Health Manager and the AuthServer
+will utilize an elected leader.
 
+## Example Usage
+
+```go
+
+ci := graft.ClusterInfo{Name: "health_manager", Size: 3}
+rpc, err := graft.NewNatsRpc(&nats.DefaultOptions)
+handler := graft.NewChanHandler(make(chan StateChange), make(chan error))
+
+node, err := graft.New(ci, handler, rpc, "/tmp/graft.log");
+
+// ...
+
+if node.State() == graft.LEADER {
+  // Process as a LEADER
+}
+
+select {
+  case sc := <- stateChangeChan:
+    // Process a state change
+  case err := <- errChan:
+    // Process and error, log etc.
+}
+
+```
