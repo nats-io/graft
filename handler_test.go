@@ -35,10 +35,8 @@ func TestStateChangeHandler(t *testing.T) {
 
 	// Use ChanHandler
 	scCh := make(chan StateChange)
-	defer close(scCh)
 	errCh := make(chan error)
-	defer close(errCh)
-	chand := NewChanHandler(make(chan StateChange), make(chan error))
+	chand := NewChanHandler(scCh, errCh)
 
 	node, err := New(ci, chand, rpc, log)
 	if err != nil {
@@ -71,10 +69,8 @@ func TestErrorHandler(t *testing.T) {
 
 	// Use ChanHandler
 	scCh := make(chan StateChange)
-	defer close(scCh)
 	errCh := make(chan error)
-	defer close(errCh)
-	chand := NewChanHandler(make(chan StateChange), make(chan error))
+	chand := NewChanHandler(scCh, errCh)
 
 	node, err := New(ci, chand, rpc, log)
 	if err != nil {
@@ -95,7 +91,7 @@ func TestErrorHandler(t *testing.T) {
 	if perr.Op != "open" {
 		t.Fatalf("Got wrong operation, wanted 'open', got %q", perr.Op)
 	}
-	if perr.Path != node.logPath {
+	if perr.Path != node.LogPath() {
 		t.Fatalf("Expected the logPath, got %\n", perr.Path)
 	}
 }
