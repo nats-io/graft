@@ -37,8 +37,8 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if node.Leader() != NO_LEADER {
-		t.Fatalf("Expected no leader, got: %s\n", node.Leader())
+	if curLeader := node.Leader(); curLeader != NO_LEADER {
+		t.Fatalf("Expected no leader, got: %s\n", curLeader)
 	}
 
 	leader := "leader123"
@@ -50,8 +50,8 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if node.Leader() != leader {
-		t.Fatalf("Expected leader to be %s, got: %s\n", leader, node.Leader())
+	if curLeader := node.Leader(); curLeader != leader {
+		t.Fatalf("Expected leader to be %s, got: %s\n", leader, curLeader)
 	}
 
 	// Test persistent state
@@ -65,8 +65,8 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if node.Leader() != leader {
-		t.Fatalf("Expected leader to be %s, got: %s\n", leader, node.Leader())
+	if curLeader := node.Leader(); curLeader != leader {
+		t.Fatalf("Expected leader to be %s, got: %s\n", leader, curLeader)
 	}
 
 	// Test persistent state
@@ -80,8 +80,8 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if node.Leader() != newLeader {
-		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, node.Leader())
+	if curLeader := node.Leader(); curLeader != newLeader {
+		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, curLeader)
 	}
 	if node.CurrentTerm() != newTerm {
 		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
@@ -96,6 +96,7 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	node := hbNode(t, 3)
 	defer node.Close()
 
+	// Speed up switch to Candidate state by shortening the timer.
 	node.electTimer.Reset(1 * time.Millisecond)
 	time.Sleep(5 * time.Millisecond)
 
@@ -103,8 +104,8 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	if state := node.State(); state != CANDIDATE {
 		t.Fatalf("Expected Node to be in Candidate state, got: %s", state)
 	}
-	if node.Leader() != NO_LEADER {
-		t.Fatalf("Expected no leader, got: %s\n", node.Leader())
+	if curLeader := node.Leader(); curLeader != NO_LEADER {
+		t.Fatalf("Expected no leader, got: %s\n", curLeader)
 	}
 
 	// Test persistent state
@@ -124,8 +125,8 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	if state := node.State(); state != CANDIDATE {
 		t.Fatalf("Expected Node to be in Candidate state, got: %s", state)
 	}
-	if node.Leader() != NO_LEADER {
-		t.Fatalf("Expected no leader, got: %s\n", node.Leader())
+	if curLeader := node.Leader(); curLeader != NO_LEADER {
+		t.Fatalf("Expected no leader, got: %s\n", curLeader)
 	}
 
 	// A newer term will reset us to a follower.
@@ -137,8 +138,8 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if node.Leader() != newLeader {
-		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, node.Leader())
+	if curLeader := node.Leader(); curLeader != newLeader {
+		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, curLeader)
 	}
 	if node.CurrentTerm() != newTerm {
 		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
@@ -174,8 +175,8 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	if state := node.State(); state != CANDIDATE {
 		t.Fatalf("Expected Node to be in Candidate state, got: %s", state)
 	}
-	if node.Leader() != NO_LEADER {
-		t.Fatalf("Expected no leader, got: %s\n", node.Leader())
+	if curLeader := node.Leader(); curLeader != NO_LEADER {
+		t.Fatalf("Expected no leader, got: %s\n", curLeader)
 	}
 
 	vreq := <-fake.VoteRequests
@@ -188,8 +189,8 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	if state := node.State(); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
 	}
-	if node.Leader() != node.id {
-		t.Fatalf("Expected us to be leader, got: %s\n", node.Leader())
+	if curLeader := node.Leader(); curLeader != node.Id() {
+		t.Fatalf("Expected us to be leader, got: %s\n", curLeader)
 	}
 	if node.CurrentTerm() != vreq.Term {
 		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
@@ -209,8 +210,8 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	if state := node.State(); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
 	}
-	if node.Leader() != node.id {
-		t.Fatalf("Expected us to be leader, got: %s\n", node.Leader())
+	if curLeader := node.Leader(); curLeader != node.Id() {
+		t.Fatalf("Expected us to be leader, got: %s\n", curLeader)
 	}
 
 	// Test persistent state
@@ -225,8 +226,8 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if node.Leader() != newLeader {
-		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, node.Leader())
+	if curLeader := node.Leader(); curLeader != newLeader {
+		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, curLeader)
 	}
 	if node.CurrentTerm() != newTerm {
 		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
