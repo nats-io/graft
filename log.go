@@ -51,6 +51,7 @@ func (n *Node) writeState() error {
 		CurrentTerm: n.term,
 		VotedFor:    n.vote,
 	}
+	logPath := n.logPath
 	n.mu.Unlock()
 
 	buf, err := json.Marshal(ps)
@@ -69,7 +70,7 @@ func (n *Node) writeState() error {
 		return err
 	}
 
-	return ioutil.WriteFile(n.logPath, toWrite, 0660)
+	return ioutil.WriteFile(logPath, toWrite, 0660)
 }
 
 func (n *Node) readState(path string) (*persistentState, error) {
