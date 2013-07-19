@@ -6,9 +6,9 @@ package graft
 // channels for the async handling of errors and state changes.
 type ChanHandler struct {
 	// Chan to receive state changes.
-	StateChangeChan chan<- StateChange
+	stateChangeChan chan<- StateChange
 	// Chan to receive errors.
-	ErrorChan chan<- error
+	errorChan chan<- error
 }
 
 // StateChange captures to from and to States for the ChanHandler.
@@ -17,17 +17,18 @@ type StateChange struct {
 }
 
 func NewChanHandler(scCh chan<- StateChange, errCh chan<- error) *ChanHandler {
-	return &ChanHandler{scCh, errCh}
+	return &ChanHandler{
+		stateChangeChan: scCh,
+		errorChan:       errCh,
+	}
 }
 
 // Queue the state change onto the channel
 func (chand *ChanHandler) StateChange(from, to State) {
-	chand.StateChangeChan <- StateChange{from, to}
+	chand.stateChangeChan <- StateChange{from, to}
 }
 
 // Queue the error onto the channel
 func (chand *ChanHandler) AsyncError(err error) {
-	chand.ErrorChan <- err
+	chand.errorChan <- err
 }
-
-
