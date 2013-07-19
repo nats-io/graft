@@ -583,3 +583,9 @@ func (n *Node) CurrentVote() string {
 	defer n.mu.Unlock()
 	return n.vote
 }
+
+func (n *Node) LogPath() string {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.logPath
+}
