@@ -1,7 +1,8 @@
 Graft
 =====
 
-A RAFT Election implementation in Go.
+A RAFT Election implementation in Go. More information on RAFT can be found in this [research paper](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf
+) and this [video](http://www.youtube.com/watch?v=YbZ3zDzDnrw&list=WL20FE97C942825E1E).
 
 [![Build Status](https://magnum.travis-ci.com/apcera/graft.png?token=UGjrGa8sFWGQcHSJeAvp)](https://magnum.travis-ci.com/apcera/graft)
 
