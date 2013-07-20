@@ -194,3 +194,61 @@ func TestReElection(t *testing.T) {
 		t.Fatalf("Expected 0 Candidates, got %d\n", candidates)
 	}
 }
+
+func TestNetworkSplit(t *testing.T) {
+	toStart := 2
+	nodes := createNodes(t, "foo", toStart)
+	// Do cleanup
+	for _, n := range nodes {
+		defer n.Close()
+	}
+
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+
+	// Make sure we have correct count.
+	leaders, followers, _ := countTypes(nodes)
+
+	if leaders != 1 {
+		t.Fatal("Expected a leader")
+	}
+	if followers != 1 {
+		t.Fatal("Expected a follower")
+	}
+
+	// Simulate a network split
+	for _, n := range nodes {
+		rpc, ok := n.rpc.(*MockRpcDriver)
+		if !ok {
+			t.Fatal("Needed a MockRPCDriver for this test.")
+		}
+		// Block communications
+		rpc.setCommBlocked(true)
+	}
+
+	// Wait on election timeout
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+
+	// Make sure we have another leader.
+	leaders, followers, _ = countTypes(nodes)
+
+	if leaders != toStart {
+		t.Fatalf("Expected %d leaders, got %d\n", toStart, leaders)
+	}
+
+	// Restore Communications
+	for _, n := range nodes {
+		rpc := n.rpc.(*MockRpcDriver)
+		// Unblock communications
+		rpc.setCommBlocked(false)
+	}
+
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+
+	leaders, followers, _ = countTypes(nodes)
+	if leaders != 1 {
+		t.Fatal("Expected a leader")
+	}
+	if followers != 1 {
+		t.Fatal("Expected a follower")
+	}
+}
