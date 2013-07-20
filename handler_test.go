@@ -53,8 +53,9 @@ func TestStateChangeHandler(t *testing.T) {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
 
-	// Force the leader to stepdown.
-	node.HeartBeats <- &Heartbeat{Term: 20, Leader: "new"}
+	// Force the leader to stepdown by using a larger term.
+	newTerm := node.CurrentTerm() + 1
+	node.HeartBeats <- &Heartbeat{Term: newTerm, Leader: "new"}
 
 	sc = wait(t, scCh)
 	if sc.from != LEADER && sc.to != FOLLOWER {
