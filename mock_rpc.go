@@ -33,11 +33,13 @@ func mockUnregisterPeer(id string) {
 }
 
 type MockRpcDriver struct {
+	mu   sync.Mutex
 	node *Node
 
 	// For testing
 	shouldFailInit bool
 	closeCalled    bool
+	shouldFailComm bool
 }
 
 func NewMockRpc() *MockRpcDriver {
@@ -61,6 +63,11 @@ func (rpc *MockRpcDriver) Close() {
 }
 
 func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
+	if rpc.isCommBlocked() {
+		// Silent failure
+		return nil
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 	for _, p := range peers {
@@ -72,6 +79,11 @@ func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
 }
 
 func (rpc *MockRpcDriver) HeartBeat(hb *Heartbeat) error {
+	if rpc.isCommBlocked() {
+		// Silent failure
+		return nil
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 	for _, p := range peers {
@@ -83,10 +95,27 @@ func (rpc *MockRpcDriver) HeartBeat(hb *Heartbeat) error {
 }
 
 func (rpc *MockRpcDriver) SendVoteResponse(candidate string, vresp *VoteResponse) error {
+	if rpc.isCommBlocked() {
+		// Silent failure
+		return nil
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 	if p := peers[candidate]; p != nil {
 		p.VoteResponses <- vresp
 	}
 	return nil
+}
+
+func (rpc *MockRpcDriver) setCommBlocked(block bool) {
+	rpc.mu.Lock()
+	defer rpc.mu.Unlock()
+	rpc.shouldFailComm = block
+}
+
+func (rpc *MockRpcDriver) isCommBlocked() bool {
+	rpc.mu.Lock()
+	defer rpc.mu.Unlock()
+	return rpc.shouldFailComm
 }
