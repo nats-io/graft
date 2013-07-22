@@ -14,13 +14,13 @@ import (
 // and vote requests. The vote responses are directed by
 // using the node.Id().
 const (
-	HEARTBEAT_SUB = "grafty.%s.heartbeat"
-	VOTE_REQ_SUB  = "grafty.%s.vote_request"
-	VOTE_RESP_SUB = "grafty.%s.vote_response"
+	HEARTBEAT_SUB = "graft.%s.heartbeat"
+	VOTE_REQ_SUB  = "graft.%s.vote_request"
+	VOTE_RESP_SUB = "graft.%s.vote_response"
 )
 
 var (
-	NotInitializedErr = errors.New("grafty(nats_rpc): Driver is not properly initialized")
+	NotInitializedErr = errors.New("graft(nats_rpc): Driver is not properly initialized")
 )
 
 type NatsRpcDriver struct {
