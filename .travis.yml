@@ -3,7 +3,7 @@ go: 1.1
 
 install:
   - echo "=============== Installing Private Repos ==============="
-  - TOKEN=$(openssl rsautl -decrypt -inkey ~/.ssh/id_rsa -in travis-support/token)
+  - TOKEN=$(openssl rsautl -decrypt -inkey ~/.ssh/id_rsa -in .travis-support/token)
   - URL="https://$TOKEN@github.com"
   - DST=~/gopath/src/github.com/apcera
   - mkdir -p "$DST"
