@@ -93,6 +93,6 @@ func TestErrorHandler(t *testing.T) {
 		t.Fatalf("Got wrong operation, wanted 'open', got %q", perr.Op)
 	}
 	if perr.Path != node.LogPath() {
-		t.Fatalf("Expected the logPath, got %\n", perr.Path)
+		t.Fatalf("Expected the logPath, got %s \n", perr.Path)
 	}
 }

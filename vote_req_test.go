@@ -138,7 +138,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 			newTerm, node.CurrentTerm())
 	}
 	if vote := node.CurrentVote(); vote != node.id {
-		t.Fatal("Expected Node to have a cast vote for itself, got:%s", vote)
+		t.Fatalf("Expected Node to have a cast vote for itself, got:%s", vote)
 	}
 
 	// Test persistent state
@@ -166,7 +166,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 			newTerm, node.CurrentTerm())
 	}
 	if vote := node.CurrentVote(); vote != node.id {
-		t.Fatal("Expected Node to have still cast vote for itself, got:%s", vote)
+		t.Fatalf("Expected Node to have still cast vote for itself, got:%s", vote)
 	}
 
 	// Test persistent state
@@ -195,7 +195,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 			newTerm, node.CurrentTerm())
 	}
 	if vote := node.CurrentVote(); vote != node.id {
-		t.Fatal("Expected Node to have still cast vote for itself, got:%s", vote)
+		t.Fatalf("Expected Node to have still cast vote for itself, got:%s", vote)
 	}
 
 	// Test persistent state

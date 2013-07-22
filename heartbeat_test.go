@@ -146,7 +146,7 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 			newTerm, node.CurrentTerm())
 	}
 	if vote := node.CurrentVote(); vote != NO_VOTE {
-		t.Fatal("Expected to have no vote at this point, got %s", node.vote)
+		t.Fatalf("Expected to have no vote at this point, got %s", node.vote)
 	}
 
 	// Test persistent state
@@ -234,7 +234,7 @@ func TestHeartBeatAsLeader(t *testing.T) {
 			newTerm, node.CurrentTerm())
 	}
 	if vote := node.CurrentVote(); vote != NO_VOTE {
-		t.Fatal("Expected to have no vote at this point, got %s", node.vote)
+		t.Fatalf("Expected to have no vote at this point, got %s", node.vote)
 	}
 
 	// Test persistent state
