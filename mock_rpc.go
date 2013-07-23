@@ -20,6 +20,16 @@ func mockPeerCount() int {
 	return len(peers)
 }
 
+func mockPeers() []*Node {
+	mu.Lock()
+	defer mu.Unlock()
+	nodes := make([]*Node, 0, len(peers))
+	for _, p := range peers {
+		nodes = append(nodes, p)
+	}
+	return nodes
+}
+
 func mockRegisterPeer(n *Node) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -50,6 +60,13 @@ func (rpc *MockRpcDriver) Init(n *Node) error {
 	if rpc.shouldFailInit {
 		return errors.New("RPC Failed to Init")
 	}
+	// Redo the channels to be buffered since we could be
+	// sending and block the select loops.
+	cSize := n.ClusterInfo().Size
+	n.VoteRequests = make(chan *VoteRequest, cSize)
+	n.VoteResponses = make(chan *VoteResponse, cSize)
+	n.HeartBeats = make(chan *Heartbeat, cSize)
+
 	mockRegisterPeer(n)
 	rpc.node = n
 	return nil
@@ -67,10 +84,7 @@ func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
 		// Silent failure
 		return nil
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	for _, p := range peers {
+	for _, p := range mockPeers() {
 		if p.id != rpc.node.id {
 			p.VoteRequests <- vr
 		}
@@ -84,9 +98,7 @@ func (rpc *MockRpcDriver) HeartBeat(hb *Heartbeat) error {
 		return nil
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-	for _, p := range peers {
+	for _, p := range mockPeers() {
 		if p.id != rpc.node.id {
 			p.HeartBeats <- hb
 		}
@@ -101,8 +113,10 @@ func (rpc *MockRpcDriver) SendVoteResponse(candidate string, vresp *VoteResponse
 	}
 
 	mu.Lock()
-	defer mu.Unlock()
-	if p := peers[candidate]; p != nil {
+	p := peers[candidate]
+	mu.Unlock()
+
+	if p != nil && p.isRunning() {
 		p.VoteResponses <- vresp
 	}
 	return nil
