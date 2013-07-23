@@ -95,9 +95,9 @@ func New(info ClusterInfo, handler Handler, rpc RPCDriver, logPath string) (*Nod
 		handler:       handler,
 		leader:        NO_LEADER,
 		quit:          make(chan chan struct{}),
-		VoteRequests:  make(chan *VoteRequest, CHAN_SIZE),
-		VoteResponses: make(chan *VoteResponse, CHAN_SIZE),
-		HeartBeats:    make(chan *Heartbeat, CHAN_SIZE),
+		VoteRequests:  make(chan *VoteRequest),
+		VoteResponses: make(chan *VoteResponse),
+		HeartBeats:    make(chan *Heartbeat),
 	}
 
 	// Init the log file and update our state.
@@ -227,18 +227,17 @@ func (n *Node) runAsLeader() {
 // Process loop for a CANDIDATE.
 func (n *Node) runAsCandidate() {
 
-	// TODO(dlc) Drain response channel from possible previous?
+	// Drain and previous responses.
+	n.drainPreviousVoteResponses()
 
 	// Initiate an Election
 	vreq := &VoteRequest{
 		Term:      n.term,
 		Candidate: n.id,
 	}
-	// Send the vote request
-	n.rpc.RequestVote(vreq)
-
 	// Collect the votes.
-	votes := 0
+	// We will vote for ourselves, so start at 1.
+	votes := 1
 
 	// Vote for ourself.
 	n.setVote(n.id)
@@ -249,8 +248,16 @@ func (n *Node) runAsCandidate() {
 		n.switchToFollower(NO_LEADER)
 		return
 	}
-	// Shortcircuit and directly process our vote.
-	n.VoteResponses <- &VoteResponse{Term: n.term, Granted: true}
+
+	// Check to see if we have already won.
+	if n.wonElection(votes) {
+		// Become LEADER if we have won.
+		n.switchToLeader()
+		return
+	}
+
+	// Send the vote request to other members
+	n.rpc.RequestVote(vreq)
 
 	for {
 		select {
@@ -267,7 +274,7 @@ func (n *Node) runAsCandidate() {
 			if vresp.Granted && vresp.Term == n.term {
 				votes++
 				if n.wonElection(votes) {
-					// Become LEADER is we have won.
+					// Become LEADER if we have won.
 					n.switchToLeader()
 					return
 				}
@@ -506,10 +513,10 @@ func randElectionTimeout() time.Duration {
 // processQuit will change or internal state to CLOSED and will close the
 // received channel to release anyone waiting on it.
 func (n *Node) processQuit(q chan struct{}) {
-	close(q)
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.state = CLOSED
+	close(q)
 }
 
 // waitOnLoopFinish will block until the loops are exiting.
@@ -519,6 +526,16 @@ func (n *Node) waitOnLoopFinish() {
 	<-q
 }
 
+// drainPreviousVoteResponses will remove any previous responses
+// that were queued up and waiting.
+func (n *Node) drainPreviousVoteResponses() {
+	select {
+	case <-n.VoteResponses:
+	default:
+		return
+	}
+}
+
 // Close will shutdown the Graft node and wait until the
 // state is processed. We will clear timers, channels, etc.
 // and close the log.
@@ -526,8 +543,8 @@ func (n *Node) Close() {
 	if n.State() == CLOSED {
 		return
 	}
-	n.waitOnLoopFinish()
 	n.rpc.Close()
+	n.waitOnLoopFinish()
 	n.clearTimers()
 	n.closeChannels()
 	n.closeLog()
@@ -535,8 +552,9 @@ func (n *Node) Close() {
 
 // Close all of the channels.
 func (n *Node) closeChannels() {
-	close(n.VoteRequests)
+	n.drainPreviousVoteResponses()
 	close(n.VoteResponses)
+	close(n.VoteRequests)
 	close(n.HeartBeats)
 	close(n.quit)
 }
