@@ -19,7 +19,4 @@ const (
 
 	NO_LEADER = ""
 	NO_VOTE   = ""
-
-	// Use buffer channels.
-	CHAN_SIZE = 8
 )
