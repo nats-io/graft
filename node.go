@@ -249,15 +249,15 @@ func (n *Node) runAsCandidate() {
 		return
 	}
 
+	// Send the vote request to other members
+	n.rpc.RequestVote(vreq)
+
 	// Check to see if we have already won.
 	if n.wonElection(votes) {
 		// Become LEADER if we have won.
 		n.switchToLeader()
 		return
 	}
-
-	// Send the vote request to other members
-	n.rpc.RequestVote(vreq)
 
 	for {
 		select {
