@@ -546,17 +546,7 @@ func (n *Node) Close() {
 	n.rpc.Close()
 	n.waitOnLoopFinish()
 	n.clearTimers()
-	n.closeChannels()
 	n.closeLog()
-}
-
-// Close all of the channels.
-func (n *Node) closeChannels() {
-	n.drainPreviousVoteResponses()
-	close(n.VoteResponses)
-	close(n.VoteRequests)
-	close(n.HeartBeats)
-	close(n.quit)
 }
 
 // Return the current state.
