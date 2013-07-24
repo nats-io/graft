@@ -86,7 +86,6 @@ func (rpc *NatsRpcDriver) Close() {
 	}
 	if rpc.ec != nil {
 		rpc.ec.Close()
-		rpc.ec = nil
 	}
 }
 
