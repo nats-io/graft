@@ -5,6 +5,7 @@ package graft
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 )
 
 var mu sync.Mutex
@@ -44,7 +45,7 @@ func mockUnregisterPeer(id string) {
 
 // Membership designations for split network simulations.
 const (
-	NO_MEMBERSHIP = iota
+	NO_MEMBERSHIP = int32(iota)
 	GRP_A
 	GRP_B
 )
@@ -59,12 +60,12 @@ func mockSplitNetwork(grp []*Node) {
 	// Reset all to other group, GrpB
 	for _, p := range peers {
 		rpc := p.rpc.(*MockRpcDriver)
-		rpc.membership = GRP_B
+		atomic.StoreInt32(&rpc.membership, GRP_B)
 	}
 	// Set passed in nodes to GrpA
 	for _, p := range grp {
 		rpc := p.rpc.(*MockRpcDriver)
-		rpc.membership = GRP_A
+		atomic.StoreInt32(&rpc.membership, GRP_A)
 	}
 }
 
@@ -74,7 +75,7 @@ func mockRestoreNetwork() {
 	defer mu.Unlock()
 	for _, p := range peers {
 		rpc := p.rpc.(*MockRpcDriver)
-		rpc.membership = NO_MEMBERSHIP
+		atomic.StoreInt32(&rpc.membership, NO_MEMBERSHIP)
 	}
 }
 
@@ -86,8 +87,7 @@ type MockRpcDriver struct {
 	shouldFailInit bool
 	closeCalled    bool
 	shouldFailComm bool
-
-	membership int
+	membership     int32
 }
 
 func NewMockRpc() *MockRpcDriver {
@@ -119,9 +119,16 @@ func (rpc *MockRpcDriver) Close() {
 
 // Test if we can talk to a peer
 func (rpc *MockRpcDriver) commAllowed(peer *Node) bool {
+	// Faked nodes
+	if peer == nil || peer.rpc == nil {
+		return true
+	}
 	peerRpc := peer.rpc.(*MockRpcDriver)
+
 	// Check to see if we are in same group as peer
-	return rpc.membership == peerRpc.membership
+	m1 := atomic.LoadInt32(&rpc.membership)
+	m2 := atomic.LoadInt32(&peerRpc.membership)
+	return m1 == m2
 }
 
 func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
