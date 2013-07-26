@@ -214,7 +214,7 @@ func TestNetworkSplit(t *testing.T) {
 	}
 	expectedFollowers := clusterSize - 1
 	if followers != expectedFollowers {
-		t.Fatal("Expected %d followers, got %d",
+		t.Fatalf("Expected %d followers, got %d",
 			expectedFollowers, followers)
 	}
 
@@ -254,7 +254,7 @@ func TestNetworkSplit(t *testing.T) {
 		t.Fatal("Expected a leader")
 	}
 	if followers != expectedFollowers {
-		t.Fatal("Expected %d followers, got %d",
+		t.Fatalf("Expected %d followers, got %d",
 			expectedFollowers, followers)
 	}
 }
