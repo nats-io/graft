@@ -123,7 +123,11 @@ func (rpc *MockRpcDriver) commAllowed(peer *Node) bool {
 	if peer == nil || peer.rpc == nil {
 		return true
 	}
-	peerRpc := peer.rpc.(*MockRpcDriver)
+	// Might be fake node, so allow if not a MockRpcDriver
+	peerRpc, ok := peer.rpc.(*MockRpcDriver)
+	if !ok {
+		return true
+	}
 
 	// Check to see if we are in same group as peer
 	m1 := atomic.LoadInt32(&rpc.membership)
