@@ -196,8 +196,9 @@ func TestReElection(t *testing.T) {
 }
 
 func TestNetworkSplit(t *testing.T) {
-	toStart := 2
-	nodes := createNodes(t, "foo", toStart)
+	clusterSize := 5
+
+	nodes := createNodes(t, "foo", clusterSize)
 	// Do cleanup
 	for _, n := range nodes {
 		defer n.Close()
@@ -211,19 +212,27 @@ func TestNetworkSplit(t *testing.T) {
 	if leaders != 1 {
 		t.Fatal("Expected a leader")
 	}
-	if followers != 1 {
-		t.Fatal("Expected a follower")
+	expectedFollowers := clusterSize - 1
+	if followers != expectedFollowers {
+		t.Fatal("Expected %d followers, got %d",
+			expectedFollowers, followers)
 	}
 
-	// Simulate a network split
-	for _, n := range nodes {
-		rpc, ok := n.rpc.(*MockRpcDriver)
-		if !ok {
-			t.Fatal("Needed a MockRPCDriver for this test.")
-		}
-		// Block communications
-		rpc.setCommBlocked(true)
+	// Simulate a network split. We will pick the leader and 1 follower
+	// to be in one group, all others will be in the other.
+
+	theLeader := findLeader(nodes)
+	if theLeader == nil {
+		t.Fatal("Expected to find a leader, got <nil>")
 	}
+	aFollower := firstFollower(nodes)
+	if aFollower == nil {
+		t.Fatal("Expected to find a follower, got <nil>")
+	}
+	grp := []*Node{theLeader, aFollower}
+
+	// Split the nodes in two..
+	mockSplitNetwork(grp)
 
 	// Wait on election timeout
 	time.Sleep(MAX_ELECTION_TIMEOUT)
@@ -231,16 +240,12 @@ func TestNetworkSplit(t *testing.T) {
 	// Make sure we have another leader.
 	leaders, followers, _ = countTypes(nodes)
 
-	if leaders != toStart {
-		t.Fatalf("Expected %d leaders, got %d\n", toStart, leaders)
+	if leaders != 2 {
+		t.Fatalf("Expected 2 leaders, got %d\n", leaders)
 	}
 
 	// Restore Communications
-	for _, n := range nodes {
-		rpc := n.rpc.(*MockRpcDriver)
-		// Unblock communications
-		rpc.setCommBlocked(false)
-	}
+	mockRestoreNetwork()
 
 	time.Sleep(MAX_ELECTION_TIMEOUT)
 
@@ -248,7 +253,8 @@ func TestNetworkSplit(t *testing.T) {
 	if leaders != 1 {
 		t.Fatal("Expected a leader")
 	}
-	if followers != 1 {
-		t.Fatal("Expected a follower")
+	if followers != expectedFollowers {
+		t.Fatal("Expected %d followers, got %d",
+			expectedFollowers, followers)
 	}
 }

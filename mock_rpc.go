@@ -42,6 +42,42 @@ func mockUnregisterPeer(id string) {
 	delete(peers, id)
 }
 
+// Membership designations for split network simulations.
+const (
+	NO_MEMBERSHIP = iota
+	GRP_A
+	GRP_B
+)
+
+// Handle a simulation of a split network.
+func mockSplitNetwork(grp []*Node) {
+	if len(grp) <= 0 {
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	// Reset all to other group, GrpB
+	for _, p := range peers {
+		rpc := p.rpc.(*MockRpcDriver)
+		rpc.membership = GRP_B
+	}
+	// Set passed in nodes to GrpA
+	for _, p := range grp {
+		rpc := p.rpc.(*MockRpcDriver)
+		rpc.membership = GRP_A
+	}
+}
+
+// Restore network from a split.
+func mockRestoreNetwork() {
+	mu.Lock()
+	defer mu.Unlock()
+	for _, p := range peers {
+		rpc := p.rpc.(*MockRpcDriver)
+		rpc.membership = NO_MEMBERSHIP
+	}
+}
+
 type MockRpcDriver struct {
 	mu   sync.Mutex
 	node *Node
@@ -50,6 +86,8 @@ type MockRpcDriver struct {
 	shouldFailInit bool
 	closeCalled    bool
 	shouldFailComm bool
+
+	membership int
 }
 
 func NewMockRpc() *MockRpcDriver {
@@ -79,13 +117,20 @@ func (rpc *MockRpcDriver) Close() {
 	}
 }
 
+// Test if we can talk to a peer
+func (rpc *MockRpcDriver) commAllowed(peer *Node) bool {
+	peerRpc := peer.rpc.(*MockRpcDriver)
+	// Check to see if we are in same group as peer
+	return rpc.membership == peerRpc.membership
+}
+
 func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
 	if rpc.isCommBlocked() {
 		// Silent failure
 		return nil
 	}
 	for _, p := range mockPeers() {
-		if p.id != rpc.node.id {
+		if p.id != rpc.node.id && rpc.commAllowed(p) {
 			p.VoteRequests <- vr
 		}
 	}
@@ -99,7 +144,7 @@ func (rpc *MockRpcDriver) HeartBeat(hb *Heartbeat) error {
 	}
 
 	for _, p := range mockPeers() {
-		if p.id != rpc.node.id {
+		if p.id != rpc.node.id && rpc.commAllowed(p) {
 			p.HeartBeats <- hb
 		}
 	}
@@ -116,7 +161,7 @@ func (rpc *MockRpcDriver) SendVoteResponse(candidate string, vresp *VoteResponse
 	p := peers[candidate]
 	mu.Unlock()
 
-	if p != nil && p.isRunning() {
+	if p != nil && p.isRunning() && rpc.commAllowed(p) {
 		p.VoteResponses <- vresp
 	}
 	return nil

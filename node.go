@@ -458,8 +458,18 @@ func (n *Node) handleVoteRequest(vreq *VoteRequest) bool {
 // wonElection returns a bool to determine if we have a
 // majority of the votes.
 func (n *Node) wonElection(votes int) bool {
-	majority := n.info.Size/2 + n.info.Size%2
-	return votes >= majority
+	return votes >= quorumNeeded(n.info.Size)
+}
+
+// Return the quorum size for a given cluster config.
+func quorumNeeded(clusterSize int) int {
+	switch clusterSize {
+	// Handle 0, but 0 is really an invalid cluster size.
+	case 0:
+		return 0
+	default:
+		return clusterSize/2 + 1
+	}
 }
 
 // Switch to a FOLLOWER.

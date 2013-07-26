@@ -60,3 +60,12 @@ func findLeader(nodes []*Node) *Node {
 	}
 	return nil
 }
+
+func firstFollower(nodes []*Node) *Node {
+	for _, n := range nodes {
+		if n.State() == FOLLOWER {
+			return n
+		}
+	}
+	return nil
+}
