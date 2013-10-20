@@ -30,8 +30,8 @@ func fakeNode(name string) *Node {
 }
 
 func TestQuorum(t *testing.T) {
-	type test struct { cluster, quorum int }
-	tests := []test{ {0,0}, {1,1}, {2,2}, {3,2}, {4,3}, {9,5}, {12, 7}}
+	type test struct{ cluster, quorum int }
+	tests := []test{{0, 0}, {1, 1}, {2, 2}, {3, 2}, {4, 3}, {9, 5}, {12, 7}}
 	for _, tc := range tests {
 		if q := quorumNeeded(tc.cluster); q != tc.quorum {
 			t.Fatalf("Expected quorum size of %d with cluster size %d, got %d\n",

@@ -23,8 +23,9 @@ func (n *Node) initLog(path string) error {
 		return err
 	} else {
 		log.Close()
-		n.logPath = path
 	}
+
+	n.logPath = path
 
 	ps, err := n.readState(path)
 	if err != nil && err != LogNoStateErr {
