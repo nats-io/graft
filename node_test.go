@@ -59,7 +59,7 @@ func TestNew(t *testing.T) {
 		t.Fatalf("Expected no leader to start, got: %s\n", node.Leader())
 	}
 	if node.CurrentTerm() != 0 {
-		t.Fatalf("Expected CurrentTerm of 0, got: %s\n", node.CurrentTerm())
+		t.Fatalf("Expected CurrentTerm of 0, got: %d\n", node.CurrentTerm())
 	}
 }
 

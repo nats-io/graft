@@ -69,7 +69,7 @@ func TestNatsLeaderElection(t *testing.T) {
 
 	if newLeader := findLeader(nodes); newLeader != leader {
 		t.Fatalf("Expected leader to keep power, was %q, now %q\n",
-			leader, newLeader)
+			leader.Id(), newLeader.Id())
 	}
 
 	// Now close the leader, make sure someone else gets elected
