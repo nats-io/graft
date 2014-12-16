@@ -1,22 +1,24 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2014 Apcera Inc. All rights reserved.
 
 // Grafty is a RAFT implementation.
 // Currently only the election functionality is supported.
 package graft
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"encoding/hex"
+	"io"
 	"sync"
 	"time"
 
-	"github.com/apcera/util/uuid"
+	mrand "math/rand"
 )
 
 type Node struct {
 	// Lock
 	mu sync.Mutex
 
-	// UUID Variant4
+	// UUID
 	id string
 
 	// Info for the cluster
@@ -88,7 +90,7 @@ func New(info ClusterInfo, handler Handler, rpc RPCDriver, logPath string) (*Nod
 
 	// Assign an Id() and start us as a FOLLOWER with no known LEADER.
 	node := &Node{
-		id:            uuid.Variant4().String(),
+		id:            genUUID(),
 		info:          info,
 		state:         FOLLOWER,
 		rpc:           rpc,
@@ -117,6 +119,12 @@ func New(info ClusterInfo, handler Handler, rpc RPCDriver, logPath string) (*Nod
 	go node.loop()
 
 	return node, nil
+}
+
+func genUUID() string {
+	u := make([]byte, 13)
+	io.ReadFull(rand.Reader, u)
+	return hex.EncodeToString(u)
 }
 
 // Convenience function for accessing the ClusterInfo.
@@ -516,7 +524,7 @@ func (n *Node) resetElectionTimeout() {
 // Generate a random timeout between MIN and MAX Election timeouts.
 // The randomness is required for the RAFT algorithm to be stable.
 func randElectionTimeout() time.Duration {
-	delta := rand.Int63n(int64(MAX_ELECTION_TIMEOUT - MIN_ELECTION_TIMEOUT))
+	delta := mrand.Int63n(int64(MAX_ELECTION_TIMEOUT - MIN_ELECTION_TIMEOUT))
 	return (MIN_ELECTION_TIMEOUT + time.Duration(delta))
 }
 
