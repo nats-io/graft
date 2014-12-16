@@ -3,6 +3,9 @@ go:
 - 1.3
 
 install:
+- DST=~/gopath/src/github.com/apcera
+- mkdir -p "$DST"
+- git clone --depth=1 --quiet https://github.com/apcera/gnatsd.git "$DST"/gnatsd
 - go get code.google.com/p/go.tools/cmd/vet
 
 script:
