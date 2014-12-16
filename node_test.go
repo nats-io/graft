@@ -1,4 +1,4 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2014 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -40,6 +40,12 @@ func TestNew(t *testing.T) {
 		t.Fatal("Expected an error with a bad rpcDriver argument")
 	}
 
+	// Test peer count
+	mpc := mockPeerCount()
+	if mpc != 0 {
+		t.Fatalf("Incorrect peer count, expected 0 got %d\n", mpc)
+	}
+
 	// log is required
 	if _, err := New(ci, hand, rpc, ""); err == nil || err != LogReqErr {
 		t.Fatal("Expected an error with no log argument")
@@ -55,6 +61,11 @@ func TestNew(t *testing.T) {
 	if state := node.State(); state != FOLLOWER {
 		t.Fatalf("Expected new Node to be in Follower state, got: %s", state)
 	}
+	// Check string version of state
+	if stateStr := node.State().String(); stateStr != "Follower" {
+		t.Fatalf("Expected new Node to be in Follower state, got: %s", stateStr)
+	}
+
 	if node.Leader() != NO_LEADER {
 		t.Fatalf("Expected no leader to start, got: %s\n", node.Leader())
 	}
@@ -78,6 +89,14 @@ func TestClose(t *testing.T) {
 
 	if node.isRunning() {
 		t.Fatal("Expected isRunning() to return false")
+	}
+
+	// Check state
+	if state := node.State(); state != CLOSED {
+		t.Fatalf("Expected node to be in Closed state, got: %s", state)
+	}
+	if stateStr := node.State().String(); stateStr != "Closed" {
+		t.Fatalf("Expected node to be in Closed state, got: %s", stateStr)
 	}
 
 	// Check to make sure rpc.Close() was called.
@@ -121,6 +140,9 @@ func TestCandidateState(t *testing.T) {
 	if state := node.State(); state != CANDIDATE {
 		t.Fatalf("Expected node to move to Candidate state, got: %s", state)
 	}
+	if stateStr := node.State().String(); stateStr != "Candidate" {
+		t.Fatalf("Expected node to move to Candidate state, got: %s", stateStr)
+	}
 }
 
 func TestLeaderState(t *testing.T) {
@@ -138,6 +160,10 @@ func TestLeaderState(t *testing.T) {
 	if state := node.State(); state != LEADER {
 		t.Fatalf("Expected node to move to Leader state, got: %s", state)
 	}
+	if stateStr := node.State().String(); stateStr != "Leader" {
+		t.Fatalf("Expected node to move to Leader state, got: %s", stateStr)
+	}
+
 }
 
 func TestSimpleLeaderElection(t *testing.T) {

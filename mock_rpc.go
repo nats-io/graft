@@ -1,4 +1,4 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2014 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -41,6 +41,12 @@ func mockUnregisterPeer(id string) {
 	mu.Lock()
 	defer mu.Unlock()
 	delete(peers, id)
+}
+
+func mockResetPeers() {
+	mu.Lock()
+	defer mu.Unlock()
+	peers = make(map[string]*Node)
 }
 
 // Membership designations for split network simulations.

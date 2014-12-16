@@ -1,4 +1,4 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2014 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -42,6 +42,38 @@ func TestLogCleanupOnClose(t *testing.T) {
 	node.Close()
 	if _, err := os.Stat(log); !os.IsNotExist(err) {
 		t.Fatal("Expected log to be removed on Close()")
+	}
+}
+
+func TestLogPresenceOnNew(t *testing.T) {
+	// Make sure to clean us up from wonly state
+	defer mockResetPeers()
+
+	ci := ClusterInfo{Name: "p", Size: 1}
+	hand, rpc, log := genNodeArgs(t)
+	node, err := New(ci, hand, rpc, log)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	defer node.Close()
+
+	// Wait to become leader..
+	for node.State() != LEADER {
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Create another with the same log..
+	node2, err := New(ci, hand, rpc, log)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	defer node2.Close()
+
+	if node.term != node2.term {
+		t.Fatalf("Terms did not match %d vs %d\n", node.term, node2.term)
+	}
+	if node.vote != node2.vote {
+		t.Fatalf("Votes did not match %s vs %s\n", node.vote, node2.vote)
 	}
 }
 
