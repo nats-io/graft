@@ -203,16 +203,74 @@ func TestStaggeredStart(t *testing.T) {
 		time.Sleep(2 * MAX_ELECTION_TIMEOUT)
 	}
 
-	leaders, followers, candidates := countTypes(nodes)
+	expectedClusterState(t, nodes, 1, 2, 0)
+}
 
-	if leaders != 1 {
-		t.Fatalf("Expected 1 Leader, got %d Leaders, %d followers, %d candidates\n", leaders, followers, candidates)
+func TestDownToOneAndBack(t *testing.T) {
+	nodes := createNodes(t, "downtoone", 3)
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+	expectedClusterState(t, nodes, 1, 2, 0)
+
+	// find and kill the leader
+	leader := findLeader(nodes)
+	leader.Close()
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+	expectedClusterState(t, nodes, 1, 1, 0)
+
+	// start a new process in the leader's place
+	leader = findLeader(nodes)
+	follower := firstFollower(nodes)
+	nodes = []*Node{leader, follower}
+	hand, rpc, logPath := genNodeArgs(t)
+	newNode, err := New(leader.ClusterInfo(), hand, rpc, logPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
 	}
-	if followers != 2 {
-		t.Fatalf("Expected 2 Follers, got %d Leaders, %d followers, %d candidates\n", leaders, followers, candidates)
+	nodes = append(nodes, newNode)
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+	expectedClusterState(t, nodes, 1, 2, 0)
+
+	// find and kill the new leader
+	leader = findLeader(nodes)
+	leader.Close()
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+	expectedClusterState(t, nodes, 1, 1, 0)
+
+	// find the leader again and kill it
+	leader = findLeader(nodes)
+	leader.Close()
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+	expectedClusterState(t, nodes, 0, 0, 1)
+
+	// grab the surviving node, we'll want to compare term numbers
+	var survivingNode *Node
+	for _, n := range nodes {
+		if n.State() == CANDIDATE {
+			survivingNode = n
+			break
+		}
 	}
-	if candidates != 0 {
-		t.Fatalf("Expected 0 Candidates, got %d Leaders, %d followers, %d candidates\n", leaders, followers, candidates)
+	if survivingNode == nil {
+		t.Fatal("Failed to find the surving node")
+	}
+
+	// start the two other nodes back up
+	nodes = []*Node{survivingNode}
+	for i := 0; i < 2; i++ {
+		hand, rpc, logPath := genNodeArgs(t)
+		node, err := New(survivingNode.ClusterInfo(), hand, rpc, logPath)
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		nodes = append(nodes, node)
+	}
+	time.Sleep(MAX_ELECTION_TIMEOUT)
+
+	// we expect to be in a consistent state and for terms to match
+	expectedClusterState(t, nodes, 1, 2, 0)
+	leader = findLeader(nodes)
+	if leader.CurrentTerm() != survivingNode.CurrentTerm() {
+		t.Fatalf("term between leader and survivor didn't match. leader: %d, survivor: %d", leader.CurrentTerm(), survivingNode.CurrentTerm())
 	}
 }
 
