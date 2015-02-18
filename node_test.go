@@ -189,6 +189,33 @@ func TestSimpleLeaderElection(t *testing.T) {
 	}
 }
 
+func TestStaggeredStart(t *testing.T) {
+	ci := ClusterInfo{Name: "staggered", Size: 3}
+	nodes := make([]*Node, 3)
+	for i := 0; i < 3; i++ {
+		hand, rpc, logPath := genNodeArgs(t)
+		node, err := New(ci, hand, rpc, logPath)
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		nodes[i] = node
+		t.Logf("Started node %d", i+1)
+		time.Sleep(2 * MAX_ELECTION_TIMEOUT)
+	}
+
+	leaders, followers, candidates := countTypes(nodes)
+
+	if leaders != 1 {
+		t.Fatalf("Expected 1 Leader, got %d Leaders, %d followers, %d candidates\n", leaders, followers, candidates)
+	}
+	if followers != 2 {
+		t.Fatalf("Expected 2 Follers, got %d Leaders, %d followers, %d candidates\n", leaders, followers, candidates)
+	}
+	if candidates != 0 {
+		t.Fatalf("Expected 0 Candidates, got %d Leaders, %d followers, %d candidates\n", leaders, followers, candidates)
+	}
+}
+
 func TestReElection(t *testing.T) {
 	toStart := 5
 	nodes := createNodes(t, "foo", toStart)
