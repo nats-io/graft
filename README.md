@@ -4,6 +4,7 @@ Graft
 A RAFT Election implementation in Go. More information on RAFT can be found in this [research paper](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf
 ) and this [video](http://www.youtube.com/watch?v=YbZ3zDzDnrw&list=WL20FE97C942825E1E).
 
+[![License MIT](https://img.shields.io/npm/l/express.svg)](http://opensource.org/licenses/MIT)
 [![Build Status](https://magnum.travis-ci.com/apcera/graft.png?token=UGjrGa8sFWGQcHSJeAvp)](https://magnum.travis-ci.com/apcera/graft)
 
 Overview
@@ -44,7 +45,7 @@ select {
 
 (The MIT License)
 
-Copyright (c) 2013-2014 Apcera Inc.
+Copyright (c) 2013-2015 Apcera Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
