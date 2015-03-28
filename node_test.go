@@ -199,10 +199,12 @@ func TestStaggeredStart(t *testing.T) {
 			t.Fatalf("Expected no error, got: %v", err)
 		}
 		nodes[i] = node
-		t.Logf("Started node %d", i+1)
-		time.Sleep(2 * MAX_ELECTION_TIMEOUT)
+		time.Sleep(MAX_ELECTION_TIMEOUT)
 	}
-
+	// Do cleanup
+	for _, n := range nodes {
+		defer n.Close()
+	}
 	expectedClusterState(t, nodes, 1, 2, 0)
 }
 
@@ -210,6 +212,11 @@ func TestDownToOneAndBack(t *testing.T) {
 	nodes := createNodes(t, "downtoone", 3)
 	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 1, 2, 0)
+
+	// Do cleanup
+	for _, n := range nodes {
+		defer n.Close()
+	}
 
 	// find and kill the leader
 	leader := findLeader(nodes)
@@ -226,6 +233,7 @@ func TestDownToOneAndBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
+	defer newNode.Close()
 	nodes = append(nodes, newNode)
 	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 1, 2, 0)
@@ -263,6 +271,7 @@ func TestDownToOneAndBack(t *testing.T) {
 			t.Fatalf("Expected no error, got: %v", err)
 		}
 		nodes = append(nodes, node)
+		defer node.Close()
 	}
 	time.Sleep(MAX_ELECTION_TIMEOUT)
 

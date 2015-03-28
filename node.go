@@ -1,6 +1,6 @@
-// Copyright 2013-2014 Apcera Inc. All rights reserved.
+// Copyright 2013-2015 Apcera Inc. All rights reserved.
 
-// Grafty is a RAFT implementation.
+// Graft is a RAFT implementation.
 // Currently only the election functionality is supported.
 package graft
 
@@ -273,6 +273,12 @@ func (n *Node) runAsCandidate() {
 		// Request to quit
 		case q := <-n.quit:
 			n.processQuit(q)
+			return
+
+		// An ElectionTimeout causes us to go back into a Candidate
+		// state and start a new election.
+		case <-n.electTimer.C:
+			n.switchToCandidate()
 			return
 
 		// A response to our votes.

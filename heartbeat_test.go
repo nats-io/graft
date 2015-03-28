@@ -1,4 +1,4 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2015 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -28,6 +28,7 @@ func sendAndWait(n *Node, hb *Heartbeat) {
 	for len(n.HeartBeats) > 0 {
 		time.Sleep(1 * time.Millisecond)
 	}
+	time.Sleep(1 * time.Millisecond)
 }
 
 func TestHeartBeatAsFollower(t *testing.T) {
