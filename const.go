@@ -1,4 +1,4 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2015 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	VERSION = "0.1"
+	VERSION = "0.2"
 
 	// Election timeout MIN and MAX per RAFT spec suggestion.
 	MIN_ELECTION_TIMEOUT = 500 * time.Millisecond
