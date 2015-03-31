@@ -69,3 +69,12 @@ func firstFollower(nodes []*Node) *Node {
 	}
 	return nil
 }
+
+func expectedClusterState(t *testing.T, nodes []*Node, leaders, followers, candidates int) {
+	currentLeaders, currentFollowers, currentCandidates := countTypes(nodes)
+	switch {
+	case leaders != currentLeaders, followers != currentFollowers, candidates != currentCandidates:
+		t.Fatalf("Cluster doesn't match expect state: expected %d leaders, %d followers, %d candidates, actual %d Leaders, %d followers, %d candidates\n",
+			leaders, followers, candidates, currentLeaders, currentFollowers, currentCandidates)
+	}
+}
