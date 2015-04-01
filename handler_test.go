@@ -45,11 +45,11 @@ func TestStateChangeHandler(t *testing.T) {
 	defer node.Close()
 
 	sc := wait(t, scCh)
-	if sc.from != FOLLOWER && sc.to != CANDIDATE {
+	if sc.From != FOLLOWER && sc.To != CANDIDATE {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
 	sc = wait(t, scCh)
-	if sc.from != CANDIDATE && sc.to != LEADER {
+	if sc.From != CANDIDATE && sc.To != LEADER {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
 
@@ -58,7 +58,7 @@ func TestStateChangeHandler(t *testing.T) {
 	node.HeartBeats <- &Heartbeat{Term: newTerm, Leader: "new"}
 
 	sc = wait(t, scCh)
-	if sc.from != LEADER && sc.to != FOLLOWER {
+	if sc.From != LEADER && sc.To != FOLLOWER {
 		t.Fatalf("Did not receive correct states for state change: %+v\n", sc)
 	}
 }
