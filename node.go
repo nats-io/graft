@@ -517,6 +517,9 @@ func (n *Node) switchToCandidate() {
 // Process a state transistion. Assume lock is held on entrance.
 // Call the async handler in a separate Go routine.
 func (n *Node) switchState(state State) {
+	if state == n.state {
+		return
+	}
 	old := n.state
 	n.state = state
 	go n.handler.StateChange(old, state)

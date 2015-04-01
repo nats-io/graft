@@ -13,7 +13,11 @@ type ChanHandler struct {
 
 // StateChange captures "from" and "to" States for the ChanHandler.
 type StateChange struct {
-	from, to State
+	// From is the previous state.
+	From State
+
+	// To is the new state.
+	To State
 }
 
 func NewChanHandler(scCh chan<- StateChange, errCh chan<- error) *ChanHandler {
@@ -25,7 +29,7 @@ func NewChanHandler(scCh chan<- StateChange, errCh chan<- error) *ChanHandler {
 
 // Queue the state change onto the channel
 func (chand *ChanHandler) StateChange(from, to State) {
-	chand.stateChangeChan <- StateChange{from, to}
+	chand.stateChangeChan <- StateChange{From: from, To: to}
 }
 
 // Queue the error onto the channel
