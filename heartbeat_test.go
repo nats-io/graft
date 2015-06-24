@@ -26,9 +26,8 @@ func sendAndWait(n *Node, hb *Heartbeat) {
 	n.HeartBeats <- hb
 	// Wait for AE to be processed.
 	for len(n.HeartBeats) > 0 {
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
-	time.Sleep(1 * time.Millisecond)
 }
 
 func TestHeartBeatAsFollower(t *testing.T) {
@@ -99,7 +98,7 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 
 	// Speed up switch to Candidate state by shortening the timer.
 	node.electTimer.Reset(1 * time.Millisecond)
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	// Verify new state
 	if state := node.State(); state != CANDIDATE {
@@ -170,7 +169,7 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	defer mockUnregisterPeer(fake.id)
 
 	node.electTimer.Reset(1 * time.Millisecond)
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	// Verify new state
 	if state := node.State(); state != CANDIDATE {
@@ -185,7 +184,7 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	// Send Fake VoteResponse to promote node to Leader
 	node.VoteResponses <- &VoteResponse{Term: vreq.Term, Granted: true}
 
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	if state := node.State(); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
