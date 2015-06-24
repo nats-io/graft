@@ -1,4 +1,4 @@
-// Copyright 2013 Apcera Inc. All rights reserved.
+// Copyright 2013-2015 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apcera/gnatsd/test"
-	"github.com/apcera/nats"
+	"github.com/nats-io/gnatsd/test"
+	"github.com/nats-io/nats"
 )
 
 func createNatsNodes(t *testing.T, name string, numNodes int) []*Node {
