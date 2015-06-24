@@ -28,7 +28,7 @@ func sendAndWait(n *Node, hb *Heartbeat) {
 	for len(n.HeartBeats) > 0 {
 		time.Sleep(1 * time.Millisecond)
 	}
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
 }
 
 func TestHeartBeatAsFollower(t *testing.T) {
