@@ -5,6 +5,7 @@ package graft
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/nats-io/nats"
 )
@@ -24,6 +25,8 @@ var (
 )
 
 type NatsRpcDriver struct {
+	sync.Mutex
+
 	// NATS encoded connection.
 	ec *nats.EncodedConn
 
@@ -72,6 +75,9 @@ func (rpc *NatsRpcDriver) Init(n *Node) (err error) {
 // Close down the subscriptions and the NATS encoded connection.
 // Will nil everything out.
 func (rpc *NatsRpcDriver) Close() {
+	rpc.Lock()
+	defer rpc.Unlock()
+
 	if rpc.hbSub != nil {
 		rpc.hbSub.Unsubscribe()
 		rpc.hbSub = nil
@@ -125,6 +131,9 @@ func (rpc *NatsRpcDriver) VoteResponseCallback(vresp *VoteResponse) {
 // RequestVote is sent from the Graft node when it has become a
 // candidate.
 func (rpc *NatsRpcDriver) RequestVote(vr *VoteRequest) error {
+	rpc.Lock()
+	defer rpc.Unlock()
+
 	// Create a new response subscription for each outstanding
 	// RequestVote and cancel the previous.
 	if rpc.vrespSub != nil {
@@ -150,6 +159,9 @@ func (rpc *NatsRpcDriver) RequestVote(vr *VoteRequest) error {
 // Heartbeat is called from the Graft node to send out a heartbeat
 // while it is a LEADER.
 func (rpc *NatsRpcDriver) HeartBeat(hb *Heartbeat) error {
+	rpc.Lock()
+	defer rpc.Unlock()
+
 	if rpc.hbSub == nil {
 		return NotInitializedErr
 	}
