@@ -21,7 +21,9 @@ of SPOF (Single Point of Failure) within a system.
 
 ci := graft.ClusterInfo{Name: "health_manager", Size: 3}
 rpc, err := graft.NewNatsRpc(&nats.DefaultOptions)
-handler := graft.NewChanHandler(make(chan StateChange), make(chan error))
+errChan := make(chan error)
+stateChangeChan := make(chan StateChange)
+handler := graft.NewChanHandler(stateChangeChan, errChan)
 
 node, err := graft.New(ci, handler, rpc, "/tmp/graft.log");
 
@@ -45,7 +47,7 @@ select {
 
 (The MIT License)
 
-Copyright (c) 2013-2015 Apcera Inc.
+Copyright (c) 2013-2016 Apcera Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
