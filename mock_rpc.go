@@ -6,6 +6,8 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+
+	"github.com/nats-io/graft/pb"
 )
 
 var mu sync.Mutex
@@ -107,9 +109,9 @@ func (rpc *MockRpcDriver) Init(n *Node) error {
 	// Redo the channels to be buffered since we could be
 	// sending and block the select loops.
 	cSize := n.ClusterInfo().Size
-	n.VoteRequests = make(chan *VoteRequest, cSize)
-	n.VoteResponses = make(chan *VoteResponse, cSize)
-	n.HeartBeats = make(chan *Heartbeat, cSize)
+	n.VoteRequests = make(chan *pb.VoteRequest, cSize)
+	n.VoteResponses = make(chan *pb.VoteResponse, cSize)
+	n.HeartBeats = make(chan *pb.Heartbeat, cSize)
 
 	mockRegisterPeer(n)
 	rpc.node = n
@@ -141,7 +143,7 @@ func (rpc *MockRpcDriver) commAllowed(peer *Node) bool {
 	return m1 == m2
 }
 
-func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
+func (rpc *MockRpcDriver) RequestVote(vr *pb.VoteRequest) error {
 	if rpc.isCommBlocked() {
 		// Silent failure
 		return nil
@@ -154,7 +156,7 @@ func (rpc *MockRpcDriver) RequestVote(vr *VoteRequest) error {
 	return nil
 }
 
-func (rpc *MockRpcDriver) HeartBeat(hb *Heartbeat) error {
+func (rpc *MockRpcDriver) HeartBeat(hb *pb.Heartbeat) error {
 	if rpc.isCommBlocked() {
 		// Silent failure
 		return nil
@@ -168,7 +170,7 @@ func (rpc *MockRpcDriver) HeartBeat(hb *Heartbeat) error {
 	return nil
 }
 
-func (rpc *MockRpcDriver) SendVoteResponse(candidate string, vresp *VoteResponse) error {
+func (rpc *MockRpcDriver) SendVoteResponse(candidate string, vresp *pb.VoteResponse) error {
 	if rpc.isCommBlocked() {
 		// Silent failure
 		return nil

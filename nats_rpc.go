@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/nats-io/graft/pb"
 	"github.com/nats-io/nats"
+	"github.com/nats-io/nats/encoders/protobuf"
 )
 
 // The subject space for the nats rpc driver is based on the
@@ -24,6 +26,7 @@ var (
 	NotInitializedErr = errors.New("graft(nats_rpc): Driver is not properly initialized")
 )
 
+// NatsRpcDriver is an implementation of the RPCDriver using NATS.
 type NatsRpcDriver struct {
 	sync.Mutex
 
@@ -43,18 +46,21 @@ type NatsRpcDriver struct {
 	node *Node
 }
 
-// Create a new instance of the driver. The NATS encoded connection
-// will use json and the options passed in.
+// NewNatsRpc creates a new instance of the driver. The NATS connection
+// will use the options passed in.
 func NewNatsRpc(opts *nats.Options) (*NatsRpcDriver, error) {
 	nc, err := opts.Connect()
-	ec, _ := nats.NewEncodedConn(nc, "json")
+	if err != nil {
+		return nil, err
+	}
+	ec, err := nats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
 		return nil, err
 	}
 	return &NatsRpcDriver{ec: ec}, nil
 }
 
-// Initialize via the Graft node.
+// Init initializes the driver via the Graft node.
 func (rpc *NatsRpcDriver) Init(n *Node) (err error) {
 	rpc.node = n
 
@@ -107,30 +113,30 @@ func (rpc *NatsRpcDriver) vreqSubject() string {
 	return fmt.Sprintf(VOTE_REQ_SUB, rpc.node.ClusterInfo().Name)
 }
 
-// Heartbeat callback which will place the heartbeat on the Graft
+// HeartbeatCallback will place the heartbeat on the Graft
 // node's appropriate channel.
-func (rpc *NatsRpcDriver) HeartbeatCallback(hb *Heartbeat) {
+func (rpc *NatsRpcDriver) HeartbeatCallback(hb *pb.Heartbeat) {
 	rpc.node.HeartBeats <- hb
 }
 
-// VoteRequest callback which will place the request on the Graft
+// VoteRequestCallback will place the request on the Graft
 // node's appropriate channel.
-func (rpc *NatsRpcDriver) VoteRequestCallback(vreq *VoteRequest) {
+func (rpc *NatsRpcDriver) VoteRequestCallback(vreq *pb.VoteRequest) {
 	// Don't respond to our own request.
 	if vreq.Candidate != rpc.node.Id() {
 		rpc.node.VoteRequests <- vreq
 	}
 }
 
-// VoteResponse callback which will place the response on the Graft
+// VoteResponseCallback will place the response on the Graft
 // node's appropriate channel.
-func (rpc *NatsRpcDriver) VoteResponseCallback(vresp *VoteResponse) {
+func (rpc *NatsRpcDriver) VoteResponseCallback(vresp *pb.VoteResponse) {
 	rpc.node.VoteResponses <- vresp
 }
 
 // RequestVote is sent from the Graft node when it has become a
 // candidate.
-func (rpc *NatsRpcDriver) RequestVote(vr *VoteRequest) error {
+func (rpc *NatsRpcDriver) RequestVote(vr *pb.VoteRequest) error {
 	rpc.Lock()
 	defer rpc.Unlock()
 
@@ -156,9 +162,9 @@ func (rpc *NatsRpcDriver) RequestVote(vr *VoteRequest) error {
 	return rpc.ec.PublishRequest(rpc.vreqSubject(), inbox, vr)
 }
 
-// Heartbeat is called from the Graft node to send out a heartbeat
+// HeartBeat is called from the Graft node to send out a heartbeat
 // while it is a LEADER.
-func (rpc *NatsRpcDriver) HeartBeat(hb *Heartbeat) error {
+func (rpc *NatsRpcDriver) HeartBeat(hb *pb.Heartbeat) error {
 	rpc.Lock()
 	defer rpc.Unlock()
 
@@ -169,6 +175,9 @@ func (rpc *NatsRpcDriver) HeartBeat(hb *Heartbeat) error {
 }
 
 // SendVoteResponse is called from the Graft node to respond to a vote request.
-func (rpc *NatsRpcDriver) SendVoteResponse(id string, vresp *VoteResponse) error {
+func (rpc *NatsRpcDriver) SendVoteResponse(id string, vresp *pb.VoteResponse) error {
+	rpc.Lock()
+	defer rpc.Unlock()
+
 	return rpc.ec.Publish(rpc.vrespSubject(id), vresp)
 }

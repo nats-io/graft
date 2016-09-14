@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/graft/pb"
+
 	mrand "math/rand"
 )
 
@@ -49,13 +51,13 @@ type Node struct {
 	electTimer *time.Timer
 
 	// Channel to receive VoteRequests.
-	VoteRequests chan *VoteRequest
+	VoteRequests chan *pb.VoteRequest
 
 	// Channel to receive the VoteResponses.
-	VoteResponses chan *VoteResponse
+	VoteResponses chan *pb.VoteResponse
 
 	// Channel to receive Heartbeats.
-	HeartBeats chan *Heartbeat
+	HeartBeats chan *pb.Heartbeat
 
 	// quit channel for shutdown on Close().
 	quit chan chan struct{}
@@ -97,9 +99,9 @@ func New(info ClusterInfo, handler Handler, rpc RPCDriver, logPath string) (*Nod
 		handler:       handler,
 		leader:        NO_LEADER,
 		quit:          make(chan chan struct{}),
-		VoteRequests:  make(chan *VoteRequest),
-		VoteResponses: make(chan *VoteResponse),
-		HeartBeats:    make(chan *Heartbeat),
+		VoteRequests:  make(chan *pb.VoteRequest),
+		VoteResponses: make(chan *pb.VoteResponse),
+		HeartBeats:    make(chan *pb.Heartbeat),
 	}
 
 	// Init the log file and update our state.
@@ -210,7 +212,7 @@ func (n *Node) runAsLeader() {
 		// Heartbeat tick. Send an HB each time.
 		case <-hb.C:
 			// Send a heartbeat
-			n.rpc.HeartBeat(&Heartbeat{Term: n.term, Leader: n.id})
+			n.rpc.HeartBeat(&pb.Heartbeat{Term: n.term, Leader: n.id})
 
 		// A Vote Request.
 		case vreq := <-n.VoteRequests:
@@ -239,7 +241,7 @@ func (n *Node) runAsCandidate() {
 	n.drainPreviousVoteResponses()
 
 	// Initiate an Election
-	vreq := &VoteRequest{
+	vreq := &pb.VoteRequest{
 		Term:      n.term,
 		Candidate: n.id,
 	}
@@ -358,7 +360,7 @@ func (n *Node) handleError(err error) {
 // handleHeartBeat is called to process a heartbeat from a LEADER.
 // We will indicate to the controlling process loop if we should
 // "stepdown" from our current role.
-func (n *Node) handleHeartBeat(hb *Heartbeat) bool {
+func (n *Node) handleHeartBeat(hb *pb.Heartbeat) bool {
 
 	// Ignore old term
 	if hb.Term < n.term {
@@ -404,9 +406,9 @@ func (n *Node) handleHeartBeat(hb *Heartbeat) bool {
 
 // handleVoteRequest will process a vote request and either
 // deny or grant our own vote to the caller.
-func (n *Node) handleVoteRequest(vreq *VoteRequest) bool {
+func (n *Node) handleVoteRequest(vreq *pb.VoteRequest) bool {
 
-	deny := &VoteResponse{Term: n.term, Granted: false}
+	deny := &pb.VoteResponse{Term: n.term, Granted: false}
 
 	// Old term, reject
 	if vreq.Term < n.term {
@@ -460,7 +462,7 @@ func (n *Node) handleVoteRequest(vreq *VoteRequest) bool {
 	}
 
 	// Send our acceptance.
-	accept := &VoteResponse{Term: n.term, Granted: true}
+	accept := &pb.VoteResponse{Term: n.term, Granted: true}
 	n.rpc.SendVoteResponse(vreq.Candidate, accept)
 
 	// Reset ElectionTimeout

@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/nats-io/graft/pb"
 )
 
 // Dumb wait program to sync on callbacks, etc... Will timeout
@@ -55,7 +57,7 @@ func TestStateChangeHandler(t *testing.T) {
 
 	// Force the leader to stepdown by using a larger term.
 	newTerm := node.CurrentTerm() + 1
-	node.HeartBeats <- &Heartbeat{Term: newTerm, Leader: "new"}
+	node.HeartBeats <- &pb.Heartbeat{Term: newTerm, Leader: "new"}
 
 	sc = wait(t, scCh)
 	if sc.From != LEADER && sc.To != FOLLOWER {
