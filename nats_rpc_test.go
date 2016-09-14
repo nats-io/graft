@@ -36,7 +36,8 @@ func createNatsNodes(t *testing.T, name string, numNodes int) []*Node {
 }
 
 func TestNatsLeaderElection(t *testing.T) {
-	test.RunServer(&test.DefaultTestOptions)
+	s := test.RunServer(&test.DefaultTestOptions)
+	defer s.Shutdown()
 
 	toStart := 5
 	nodes := createNatsNodes(t, "nats_test", toStart)

@@ -1,0 +1,32 @@
+// Copyright 2016 Apcera Inc. All rights reserved.
+//
+// Uses https://github.com/gogo/protobuf
+// compiled via `protoc -I=. -I=$GOPATH/src  --gogofaster_out=. protocol.proto`
+
+syntax = "proto3";
+package pb;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+// VoteRequest
+message VoteRequest {
+  uint64 Term      = 1; // Term for the candidate.
+  string Candidate = 2; // The candidate for the election.
+}
+
+// VoteResponse
+message VoteResponse {
+  uint64 Term      = 1; // The responder's term.
+  bool   Granted   = 2; // Vote's status
+}
+
+// Heartbeat
+message Heartbeat {
+  uint64 Term    = 1; // Leader's current term.
+  string Leader  = 2; // Leaders id.
+}

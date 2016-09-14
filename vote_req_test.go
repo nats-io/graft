@@ -5,6 +5,8 @@ package graft
 import (
 	"testing"
 	"time"
+
+	"github.com/nats-io/graft/pb"
 )
 
 // Test VoteRequests RPC in different states.
@@ -24,8 +26,8 @@ func vreqNode(t *testing.T, expected int) *Node {
 func fakeNode(name string) *Node {
 	// Create fake node to watch VoteResponses.
 	fake := &Node{id: name}
-	fake.VoteResponses = make(chan *VoteResponse)
-	fake.VoteRequests = make(chan *VoteRequest, 32)
+	fake.VoteResponses = make(chan *pb.VoteResponse)
+	fake.VoteRequests = make(chan *pb.VoteRequest, 32)
 	return fake
 }
 
@@ -59,7 +61,7 @@ func TestVoteRequestAsFollower(t *testing.T) {
 	defer mockUnregisterPeer(fake.id)
 
 	// a VoteRequest with lower term should be ignored
-	node.VoteRequests <- &VoteRequest{Term: 1, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: 1, Candidate: fake.id}
 	vresp := <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -86,7 +88,7 @@ func TestVoteRequestAsFollower(t *testing.T) {
 	// a VoteRequest with a higher term should reset follower
 	newTerm++
 
-	node.VoteRequests <- &VoteRequest{Term: newTerm, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: newTerm, Candidate: fake.id}
 	vresp = <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -156,7 +158,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 	testStateOfNode(t, node)
 
 	// a VoteRequest with lower term should be ignored
-	node.VoteRequests <- &VoteRequest{Term: 1, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: 1, Candidate: fake.id}
 	vresp := <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -185,7 +187,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 
 	// a VoteRequest for same term but different candidate should be
 	// denied since we always vote for ourself.
-	node.VoteRequests <- &VoteRequest{Term: newTerm, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: newTerm, Candidate: fake.id}
 	vresp = <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -214,7 +216,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 
 	// a VoteRequest with a higher term should reset to follower
 	newTerm++
-	node.VoteRequests <- &VoteRequest{Term: newTerm, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: newTerm, Candidate: fake.id}
 	vresp = <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -268,7 +270,7 @@ func TestVoteRequestAsLeader(t *testing.T) {
 	vreq := <-fake.VoteRequests
 
 	// Send Fake VoteResponse to promote node to Leader
-	node.VoteResponses <- &VoteResponse{Term: vreq.Term, Granted: true}
+	node.VoteResponses <- &pb.VoteResponse{Term: vreq.Term, Granted: true}
 
 	// FIXME(dlc) use handler instead.
 	time.Sleep(5 * time.Millisecond)
@@ -288,7 +290,7 @@ func TestVoteRequestAsLeader(t *testing.T) {
 	testStateOfNode(t, node)
 
 	// a VoteRequest with lower term should be ignored
-	node.VoteRequests <- &VoteRequest{Term: 1, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: 1, Candidate: fake.id}
 	vresp := <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -314,7 +316,7 @@ func TestVoteRequestAsLeader(t *testing.T) {
 
 	// a VoteRequest with a higher term should force us to stepdown
 	newTerm++
-	node.VoteRequests <- &VoteRequest{Term: newTerm, Candidate: fake.id}
+	node.VoteRequests <- &pb.VoteRequest{Term: newTerm, Candidate: fake.id}
 	vresp = <-fake.VoteResponses
 	if vresp.Term != newTerm {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",

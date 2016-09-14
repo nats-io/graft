@@ -5,6 +5,8 @@ package graft
 import (
 	"testing"
 	"time"
+
+	"github.com/nats-io/graft/pb"
 )
 
 // Test HeartBeat RPC in different states.
@@ -21,7 +23,7 @@ func hbNode(t *testing.T, expected int) *Node {
 	return node
 }
 
-func sendAndWait(n *Node, hb *Heartbeat) {
+func sendAndWait(n *Node, hb *pb.Heartbeat) {
 	// Any Heartbeat will set the Leader if none given.
 	n.HeartBeats <- hb
 	// Wait for AE to be processed.
@@ -45,7 +47,7 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	term := uint64(2)
 
 	// Any HeartBeat will set the Leader if none given.
-	sendAndWait(node, &Heartbeat{Term: term, Leader: leader})
+	sendAndWait(node, &pb.Heartbeat{Term: term, Leader: leader})
 
 	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
@@ -60,7 +62,7 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	// Ignore lower terms when we have a leader already.
 	// any HeartBeat will set the Leader if none given.
 	oldLeader := "oldleader"
-	sendAndWait(node, &Heartbeat{Term: 1, Leader: oldLeader})
+	sendAndWait(node, &pb.Heartbeat{Term: 1, Leader: oldLeader})
 
 	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
@@ -75,7 +77,7 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	// A newer term will reset.
 	newLeader := "newLeader"
 	newTerm := uint64(10)
-	sendAndWait(node, &Heartbeat{Term: newTerm, Leader: newLeader})
+	sendAndWait(node, &pb.Heartbeat{Term: newTerm, Leader: newLeader})
 
 	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
@@ -120,7 +122,7 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	term := uint64(2)
 
 	// Any HeartBeat will set the Leader if none given.
-	sendAndWait(node, &Heartbeat{Term: term, Leader: leader})
+	sendAndWait(node, &pb.Heartbeat{Term: term, Leader: leader})
 
 	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
 		t.Fatalf("Expected Node to be in Candidate state, got: %s", state)
@@ -133,7 +135,7 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	newLeader := "newLeader"
 	newTerm++
 
-	sendAndWait(node, &Heartbeat{Term: newTerm, Leader: newLeader})
+	sendAndWait(node, &pb.Heartbeat{Term: newTerm, Leader: newLeader})
 
 	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
@@ -182,7 +184,7 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	vreq := <-fake.VoteRequests
 
 	// Send Fake VoteResponse to promote node to Leader
-	node.VoteResponses <- &VoteResponse{Term: vreq.Term, Granted: true}
+	node.VoteResponses <- &pb.VoteResponse{Term: vreq.Term, Granted: true}
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -205,7 +207,7 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	term := uint64(2)
 
 	// Any HeartBeat will set the Leader if none given.
-	sendAndWait(node, &Heartbeat{Term: term, Leader: leader})
+	sendAndWait(node, &pb.Heartbeat{Term: term, Leader: leader})
 
 	if state := waitForState(node, LEADER); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
@@ -221,7 +223,7 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	newLeader := "newLeader"
 	newTerm = 20
 
-	sendAndWait(node, &Heartbeat{Term: newTerm, Leader: newLeader})
+	sendAndWait(node, &pb.Heartbeat{Term: newTerm, Leader: newLeader})
 
 	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
