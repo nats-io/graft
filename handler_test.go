@@ -15,7 +15,10 @@ func wait(t *testing.T, ch chan StateChange) *StateChange {
 	select {
 	case sc := <-ch:
 		return &sc
-	case <-time.After(MAX_ELECTION_TIMEOUT):
+	// It could be that the random election time is the max. Inc
+	// that case, the node will still need a bit more time to
+	// transition.
+	case <-time.After(MAX_ELECTION_TIMEOUT + 50*time.Millisecond):
 		t.Fatal("Timeout waiting on state change")
 	}
 	return nil

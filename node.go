@@ -38,6 +38,10 @@ type Node struct {
 	// Async handler
 	handler Handler
 
+	// Used to chain go routines posting events to async handler.
+	stateChain chan bool // For state changes
+	errChain   chan bool // For errors
+
 	// Current leader
 	leader string
 
@@ -354,7 +358,11 @@ func (n *Node) runAsFollower() {
 
 // Send the error to the async handler.
 func (n *Node) handleError(err error) {
-	go n.handler.AsyncError(err)
+	n.mu.Lock()
+	n.serializeGoRoutine(&n.errChain, func() {
+		n.handler.AsyncError(err)
+	})
+	n.mu.Unlock()
 }
 
 // handleHeartBeat is called to process a heartbeat from a LEADER.
@@ -516,6 +524,20 @@ func (n *Node) switchToCandidate() {
 	n.switchState(CANDIDATE)
 }
 
+// Execute `f` in a separate go routine, but ensures that functions
+// are executed in order.
+func (n *Node) serializeGoRoutine(nextCh *(chan bool), f func()) {
+	prevCh := *nextCh // possibly nil
+	*nextCh = make(chan bool, 1)
+	go func(prev, next chan bool) {
+		if prev != nil {
+			<-prev
+		}
+		f()
+		next <- true
+	}(prevCh, *nextCh)
+}
+
 // Process a state transistion. Assume lock is held on entrance.
 // Call the async handler in a separate Go routine.
 func (n *Node) switchState(state State) {
@@ -524,7 +546,9 @@ func (n *Node) switchState(state State) {
 	}
 	old := n.state
 	n.state = state
-	go n.handler.StateChange(old, state)
+	n.serializeGoRoutine(&n.stateChain, func() {
+		n.handler.StateChange(old, state)
+	})
 }
 
 // Reset the election timeout with a random value.
