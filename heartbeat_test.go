@@ -47,10 +47,10 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	// Any HeartBeat will set the Leader if none given.
 	sendAndWait(node, &Heartbeat{Term: term, Leader: leader})
 
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != leader {
+	if curLeader := waitForLeader(node, leader); curLeader != leader {
 		t.Fatalf("Expected leader to be %s, got: %s\n", leader, curLeader)
 	}
 
@@ -62,10 +62,10 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	oldLeader := "oldleader"
 	sendAndWait(node, &Heartbeat{Term: 1, Leader: oldLeader})
 
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != leader {
+	if curLeader := waitForLeader(node, leader); curLeader != leader {
 		t.Fatalf("Expected leader to be %s, got: %s\n", leader, curLeader)
 	}
 
@@ -77,10 +77,10 @@ func TestHeartBeatAsFollower(t *testing.T) {
 	newTerm := uint64(10)
 	sendAndWait(node, &Heartbeat{Term: newTerm, Leader: newLeader})
 
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != newLeader {
+	if curLeader := waitForLeader(node, newLeader); curLeader != newLeader {
 		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, curLeader)
 	}
 	if node.CurrentTerm() != newTerm {
@@ -122,10 +122,10 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 	// Any HeartBeat will set the Leader if none given.
 	sendAndWait(node, &Heartbeat{Term: term, Leader: leader})
 
-	if state := node.State(); state != CANDIDATE {
+	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
 		t.Fatalf("Expected Node to be in Candidate state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != NO_LEADER {
+	if curLeader := waitForLeader(node, NO_LEADER); curLeader != NO_LEADER {
 		t.Fatalf("Expected no leader, got: %s\n", curLeader)
 	}
 
@@ -135,10 +135,10 @@ func TestHeartBeatAsCandidate(t *testing.T) {
 
 	sendAndWait(node, &Heartbeat{Term: newTerm, Leader: newLeader})
 
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != newLeader {
+	if curLeader := waitForLeader(node, newLeader); curLeader != newLeader {
 		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, curLeader)
 	}
 	if node.CurrentTerm() != newTerm {
@@ -172,10 +172,10 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Verify new state
-	if state := node.State(); state != CANDIDATE {
+	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
 		t.Fatalf("Expected Node to be in Candidate state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != NO_LEADER {
+	if curLeader := waitForLeader(node, NO_LEADER); curLeader != NO_LEADER {
 		t.Fatalf("Expected no leader, got: %s\n", curLeader)
 	}
 
@@ -186,10 +186,10 @@ func TestHeartBeatAsLeader(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	if state := node.State(); state != LEADER {
+	if state := waitForState(node, LEADER); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != node.Id() {
+	if curLeader := waitForLeader(node, node.Id()); curLeader != node.Id() {
 		t.Fatalf("Expected us to be leader, got: %s\n", curLeader)
 	}
 	if node.CurrentTerm() != vreq.Term {
@@ -207,10 +207,10 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	// Any HeartBeat will set the Leader if none given.
 	sendAndWait(node, &Heartbeat{Term: term, Leader: leader})
 
-	if state := node.State(); state != LEADER {
+	if state := waitForState(node, LEADER); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != node.Id() {
+	if curLeader := waitForLeader(node, node.Id()); curLeader != node.Id() {
 		t.Fatalf("Expected us to be leader, got: %s\n", curLeader)
 	}
 
@@ -223,10 +223,10 @@ func TestHeartBeatAsLeader(t *testing.T) {
 
 	sendAndWait(node, &Heartbeat{Term: newTerm, Leader: newLeader})
 
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
-	if curLeader := node.Leader(); curLeader != newLeader {
+	if curLeader := waitForLeader(node, newLeader); curLeader != newLeader {
 		t.Fatalf("Expected leader to be %s, got: %s\n", newLeader, curLeader)
 	}
 	if node.CurrentTerm() != newTerm {

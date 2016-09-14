@@ -5,6 +5,7 @@ package graft
 import (
 	"io/ioutil"
 	"testing"
+	"time"
 )
 
 type dummyHandler struct {
@@ -77,4 +78,30 @@ func expectedClusterState(t *testing.T, nodes []*Node, leaders, followers, candi
 		t.Fatalf("Cluster doesn't match expect state: expected %d leaders, %d followers, %d candidates, actual %d Leaders, %d followers, %d candidates\n",
 			leaders, followers, candidates, currentLeaders, currentFollowers, currentCandidates)
 	}
+}
+
+func waitForLeader(node *Node, expectedLeader string) string {
+	curLeader := ""
+	timeout := time.Now().Add(5 * time.Second)
+	for time.Now().Before(timeout) {
+		curLeader = node.Leader()
+		if curLeader == expectedLeader {
+			return expectedLeader
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return curLeader
+}
+
+func waitForState(node *Node, expectedState State) State {
+	curState := FOLLOWER
+	timeout := time.Now().Add(5 * time.Second)
+	for time.Now().Before(timeout) {
+		curState = node.State()
+		if curState == expectedState {
+			return expectedState
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return curState
 }
