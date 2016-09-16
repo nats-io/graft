@@ -8,12 +8,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	mrand "math/rand"
 	"sync"
 	"time"
 
 	"github.com/nats-io/graft/pb"
-
-	mrand "math/rand"
 )
 
 type Node struct {
@@ -38,9 +37,11 @@ type Node struct {
 	// Async handler
 	handler Handler
 
-	// Used to chain go routines posting events to async handler.
-	stateChain chan bool // For state changes
-	errChain   chan bool // For errors
+	// Pending StateChange events
+	stateChg []*StateChange
+
+	// Pending Error events
+	errors []error
 
 	// Current leader
 	leader string
@@ -356,12 +357,32 @@ func (n *Node) runAsFollower() {
 	}
 }
 
+// postError invokes handler.AsyncError() in a go routine.
+// When the handler call returns, and if there are still pending errors,
+// this function will recursively call itself with the first element in
+// the list.
+func (n *Node) postError(err error) {
+	go func() {
+		n.handler.AsyncError(err)
+		n.mu.Lock()
+		n.errors = n.errors[1:]
+		if len(n.errors) > 0 {
+			err := n.errors[0]
+			n.postError(err)
+		}
+		n.mu.Unlock()
+	}()
+}
+
 // Send the error to the async handler.
 func (n *Node) handleError(err error) {
 	n.mu.Lock()
-	n.serializeGoRoutine(&n.errChain, func() {
-		n.handler.AsyncError(err)
-	})
+	n.errors = append(n.errors, err)
+	// Call postError only for the first error added.
+	// Check postError for details.
+	if len(n.errors) == 1 {
+		n.postError(err)
+	}
 	n.mu.Unlock()
 }
 
@@ -524,18 +545,21 @@ func (n *Node) switchToCandidate() {
 	n.switchState(CANDIDATE)
 }
 
-// Execute `f` in a separate go routine, but ensures that functions
-// are executed in order.
-func (n *Node) serializeGoRoutine(nextCh *(chan bool), f func()) {
-	prevCh := *nextCh // possibly nil
-	*nextCh = make(chan bool, 1)
-	go func(prev, next chan bool) {
-		if prev != nil {
-			<-prev
+// postStateChange invokes handler.StateChange() in a go routine.
+// When the handler call returns, and if there are still pending state
+// changes, this function will recursively call itself with the first
+// element in the list.
+func (n *Node) postStateChange(sc *StateChange) {
+	go func() {
+		n.handler.StateChange(sc.From, sc.To)
+		n.mu.Lock()
+		n.stateChg = n.stateChg[1:]
+		if len(n.stateChg) > 0 {
+			sc := n.stateChg[0]
+			n.postStateChange(sc)
 		}
-		f()
-		next <- true
-	}(prevCh, *nextCh)
+		n.mu.Unlock()
+	}()
 }
 
 // Process a state transistion. Assume lock is held on entrance.
@@ -546,9 +570,13 @@ func (n *Node) switchState(state State) {
 	}
 	old := n.state
 	n.state = state
-	n.serializeGoRoutine(&n.stateChain, func() {
-		n.handler.StateChange(old, state)
-	})
+	sc := &StateChange{From: old, To: state}
+	n.stateChg = append(n.stateChg, sc)
+	// Invoke postStateChange only for the first state change added.
+	// Check postStateChange for details.
+	if len(n.stateChg) == 1 {
+		n.postStateChange(sc)
+	}
 }
 
 // Reset the election timeout with a random value.
