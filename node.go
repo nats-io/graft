@@ -8,12 +8,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	mrand "math/rand"
 	"sync"
 	"time"
 
 	"github.com/nats-io/graft/pb"
-
-	mrand "math/rand"
 )
 
 type Node struct {

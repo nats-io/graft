@@ -3,13 +3,13 @@
 package graft
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
-	"fmt"
 	"github.com/nats-io/graft/pb"
-	"strconv"
 )
 
 // Dumb wait program to sync on callbacks, etc... Will timeout
