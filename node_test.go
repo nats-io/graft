@@ -137,7 +137,7 @@ func TestCandidateState(t *testing.T) {
 
 	// Should move to candidate state within MAX_ELECTION_TIMEOUT
 	time.Sleep(MAX_ELECTION_TIMEOUT)
-	if state := node.State(); state != CANDIDATE {
+	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
 		t.Fatalf("Expected node to move to Candidate state, got: %s", state)
 	}
 	if stateStr := node.State().String(); stateStr != "Candidate" {

@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
 	"github.com/nats-io/graft/pb"
+	"strconv"
 )
 
 // Dumb wait program to sync on callbacks, etc... Will timeout
@@ -99,5 +101,94 @@ func TestErrorHandler(t *testing.T) {
 	}
 	if perr.Path != node.LogPath() {
 		t.Fatalf("Expected the logPath, got %s \n", perr.Path)
+	}
+}
+
+func TestChandHandlerNotBlockingNode(t *testing.T) {
+	ci := ClusterInfo{Name: "foo", Size: 1}
+	_, rpc, log := genNodeArgs(t)
+
+	// Use ChanHandler
+	scCh := make(chan StateChange)
+	errCh := make(chan error)
+	chHand := NewChanHandler(scCh, errCh)
+
+	node, err := New(ci, chHand, rpc, log)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	defer node.Close()
+
+	// Reset the node election timer to a very high number so
+	// it does not interfere with the test
+	node.mu.Lock()
+	node.electTimer.Reset(time.Hour)
+	node.mu.Unlock()
+	// Wait in case election was happening
+	time.Sleep(MAX_ELECTION_TIMEOUT + 50*time.Millisecond)
+	// Drain the state changes
+	drained := false
+	for !drained {
+		select {
+		case <-scCh:
+		default:
+			drained = true
+		}
+	}
+
+	// Make sure that if no one is dequeuing state changes or errors
+	// the node is not blocked.
+	total := 10
+	to := FOLLOWER
+	step := 0
+	for i := 0; i < total; i++ {
+		switch step {
+		case 0:
+			to = CANDIDATE
+			step = 1
+		case 1:
+			to = LEADER
+			step = 2
+		case 2:
+			to = FOLLOWER
+			step = 0
+		}
+		// This call expects lock to be held on entry
+		node.mu.Lock()
+		node.switchState(to)
+		node.mu.Unlock()
+		// This call does not
+		node.handleError(fmt.Errorf("%d", i))
+	}
+
+	// Now dequeue from channels and verify order
+	step = 0
+	for i := 0; i < total; i++ {
+		sc := <-scCh
+		switch step {
+		case 0:
+			if sc.From != FOLLOWER || sc.To != CANDIDATE {
+				t.Fatalf("i=%d Expected state to be from Follower to Candidate, got %v to %v", i, sc.From.String(), sc.To.String())
+			}
+			step = 1
+		case 1:
+			if sc.From != CANDIDATE || sc.To != LEADER {
+				t.Fatalf("i=%d Expected state to be from Candidate to Leader, got %v to %v", i, sc.From.String(), sc.To.String())
+			}
+			step = 2
+		case 2:
+			if sc.From != LEADER || sc.To != FOLLOWER {
+				t.Fatalf("i=%d Expected state to be from Leader to Follower, got %v to %v", i, sc.From.String(), sc.To.String())
+			}
+			step = 0
+		}
+		err := <-errCh
+		errAsInt, convErr := strconv.Atoi(err.Error())
+		if convErr != nil {
+			t.Fatalf("Error converting error content: %v", convErr)
+		}
+		if errAsInt != i {
+			t.Fatalf("Expected error to be %d, got %d", i, errAsInt)
+		}
 	}
 }
