@@ -57,9 +57,17 @@ func TestLogPresenceOnNew(t *testing.T) {
 	}
 	defer node.Close()
 
+	// Set some non default values
+	node.setTerm(10)
+	node.setVote("fake")
+	// Force writing the state
+	if err := node.writeState(); err != nil {
+		t.Fatalf("Unexpected error writing state: %v", err)
+	}
+
 	// Wait to become leader..
-	for node.State() != LEADER {
-		time.Sleep(100 * time.Millisecond)
+	if state := waitForState(node, LEADER); state != LEADER {
+		t.Fatalf("Expected Node to be Leader, got %s", state)
 	}
 
 	// Create another with the same log..
@@ -85,11 +93,22 @@ func TestLogCreationOnNew(t *testing.T) {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 	defer node.Close()
-	// Should move to candidate state within MAX_ELECTION_TIMEOUT
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-	if state := node.State(); state != CANDIDATE {
+
+	fake := fakeNode("fake")
+	mockRegisterPeer(fake)
+	defer mockUnregisterPeer(fake.Id())
+
+	// Should move to candidate state
+	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
 		t.Fatalf("Expected node to move to Candidate state, got: %s", state)
 	}
+	// After this point, we only have the guarantee that the node's state
+	// changed to Candidate, but it is possible that the runAsCandidate()
+	// loop has not started yet, or is in progress but before the state was
+	// written. We know that the state is written before sending a vote request,
+	// so look for that vote request as the indication that the state should
+	// have been written.
+	<-fake.VoteRequests
 	// We should have written our state.
 	testStateOfNode(t, node)
 }
@@ -104,8 +123,13 @@ func TestCorruption(t *testing.T) {
 	defer node.Close()
 
 	// Delay elections
+	node.mu.Lock()
 	node.electTimer.Reset(10 * time.Second)
+	node.mu.Unlock()
 
+	node.setTerm(1)
+	node.setVote("foo")
+	// Force writing the state
 	node.writeState()
 
 	// We should have written our state.
@@ -133,7 +157,7 @@ func TestCorruption(t *testing.T) {
 	// Make sure we get the corruptError
 	_, err = node.readState(node.logPath)
 	if err == nil {
-		t.Fatalf("Expected an error reading corrupt state")
+		t.Fatal("Expected an error reading corrupt state")
 	}
 	if err != LogCorruptErr {
 		t.Fatalf("Expected corrupt error, got %q", err)
@@ -143,20 +167,18 @@ func TestCorruption(t *testing.T) {
 // This will test that we have the correct saved state at any point in time.
 func testStateOfNode(t *testing.T, node *Node) {
 	if node == nil {
-		t.Fatal("Expected a non-nil Node")
+		stackFatalf(t, "Expected a non-nil Node")
 	}
 	ps, err := node.readState(node.logPath)
 	if err != nil {
-		t.Fatalf("Err reading state: %q\n", err)
+		stackFatalf(t, "Err reading state: %q\n", err)
 	}
 	if ps.CurrentTerm != node.CurrentTerm() {
-		t.Fatalf("Expected CurrentTerm of %d, got %d\n",
+		stackFatalf(t, "Expected CurrentTerm of %d, got %d\n",
 			node.CurrentTerm(), ps.CurrentTerm)
 	}
 	if ps.VotedFor != node.CurrentVote() {
-		t.Fatalf("Expected a vote for %q, got %q\n",
+		stackFatalf(t, "Expected a vote for %q, got %q\n",
 			node.CurrentVote(), ps.VotedFor)
 	}
 }
-
-// See voteReq and AppendEntry tests for more.

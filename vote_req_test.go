@@ -3,6 +3,7 @@
 package graft
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -226,7 +227,7 @@ func TestVoteRequestAsCandidate(t *testing.T) {
 		t.Fatal("Expected the VoteResponse to have been Granted")
 	}
 	// Verify new state
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
 	if node.Leader() != NO_LEADER {
@@ -272,10 +273,7 @@ func TestVoteRequestAsLeader(t *testing.T) {
 	// Send Fake VoteResponse to promote node to Leader
 	node.VoteResponses <- &pb.VoteResponse{Term: vreq.Term, Granted: true}
 
-	// FIXME(dlc) use handler instead.
-	time.Sleep(5 * time.Millisecond)
-
-	if state := node.State(); state != LEADER {
+	if state := waitForState(node, LEADER); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
 	}
 	if node.Leader() != node.id {
@@ -314,6 +312,31 @@ func TestVoteRequestAsLeader(t *testing.T) {
 	// Test persistent state
 	testStateOfNode(t, node)
 
+	// a VoteRequest with same term should be ignored
+	node.VoteRequests <- &pb.VoteRequest{Term: newTerm, Candidate: fake.id}
+	vresp = <-fake.VoteResponses
+	if vresp.Term != newTerm {
+		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
+			newTerm, vresp.Term)
+	}
+	if vresp.Granted != false {
+		t.Fatal("Expected the VoteResponse to have Granted of false")
+	}
+	// Make sure no changes to node
+	if state := node.State(); state != LEADER {
+		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
+	}
+	if node.Leader() != node.id {
+		t.Fatalf("Expected us to be leader, got: %s\n", node.Leader())
+	}
+	if node.CurrentTerm() != newTerm {
+		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
+			newTerm, node.CurrentTerm())
+	}
+
+	// Test persistent state
+	testStateOfNode(t, node)
+
 	// a VoteRequest with a higher term should force us to stepdown
 	newTerm++
 	node.VoteRequests <- &pb.VoteRequest{Term: newTerm, Candidate: fake.id}
@@ -326,7 +349,7 @@ func TestVoteRequestAsLeader(t *testing.T) {
 		t.Fatal("Expected the VoteResponse to have been Granted")
 	}
 	// Verify new state
-	if state := node.State(); state != FOLLOWER {
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
 		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
 	}
 	if node.Leader() != NO_LEADER {
@@ -342,4 +365,46 @@ func TestVoteRequestAsLeader(t *testing.T) {
 
 	// Test persistent state
 	testStateOfNode(t, node)
+}
+
+func TestVoteRequestAsLeaderStepsDownDueToErrorOnSave(t *testing.T) {
+	leader := vreqNode(t, 1)
+	defer leader.Close()
+
+	leader.mu.Lock()
+	leader.electTimer.Reset(time.Millisecond)
+	leader.mu.Unlock()
+
+	// Wait for this node to be elected leader
+	waitForLeader(leader, leader.Id())
+
+	// Change log permissions to cause error
+	if err := os.Chmod(leader.logPath, 0400); err != nil {
+		t.Fatalf("Unable to change log permissions: %v", err)
+	}
+	defer os.Chmod(leader.logPath, 0660)
+
+	// Create fake node to watch VoteResponses.
+	fake := fakeNode("fake")
+
+	// Hook up to MockRPC layer
+	mockRegisterPeer(fake)
+	defer mockUnregisterPeer(fake.id)
+
+	leader.VoteRequests <- &pb.VoteRequest{Candidate: fake.Id(), Term: 2}
+	vresp := <-fake.VoteResponses
+	if vresp.Term != 1 {
+		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
+			1, vresp.Term)
+	}
+	if vresp.Granted != false {
+		t.Fatal("Expected the VoteResponse to have Granted of false")
+	}
+	// Restore permissions
+	os.Chmod(leader.logPath, 0660)
+
+	// The leader should step down
+	if state := waitForState(leader, FOLLOWER); state != FOLLOWER {
+		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
+	}
 }

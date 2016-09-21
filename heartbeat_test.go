@@ -3,6 +3,7 @@
 package graft
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -171,7 +172,6 @@ func TestHeartBeatAsLeader(t *testing.T) {
 	defer mockUnregisterPeer(fake.id)
 
 	node.electTimer.Reset(1 * time.Millisecond)
-	time.Sleep(10 * time.Millisecond)
 
 	// Verify new state
 	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
@@ -185,8 +185,6 @@ func TestHeartBeatAsLeader(t *testing.T) {
 
 	// Send Fake VoteResponse to promote node to Leader
 	node.VoteResponses <- &pb.VoteResponse{Term: vreq.Term, Granted: true}
-
-	time.Sleep(10 * time.Millisecond)
 
 	if state := waitForState(node, LEADER); state != LEADER {
 		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
@@ -241,4 +239,60 @@ func TestHeartBeatAsLeader(t *testing.T) {
 
 	// Test persistent state
 	testStateOfNode(t, node)
+}
+
+func TestHeartBeatAsLeaderErrorOnWrite(t *testing.T) {
+	node := hbNode(t, 3)
+	defer node.Close()
+
+	// Set term to artificial higher value.
+	newTerm := uint64(8)
+	node.setTerm(newTerm)
+
+	// Create fake node to elect the Leader.
+	fake := fakeNode("fake")
+
+	// Hook up to MockRPC layer
+	mockRegisterPeer(fake)
+	defer mockUnregisterPeer(fake.id)
+
+	node.mu.Lock()
+	node.electTimer.Reset(1 * time.Millisecond)
+	node.mu.Unlock()
+
+	vreq := <-fake.VoteRequests
+
+	// Send Fake VoteResponse to promote node to Leader
+	node.VoteResponses <- &pb.VoteResponse{Term: vreq.Term, Granted: true}
+
+	if state := waitForState(node, LEADER); state != LEADER {
+		t.Fatalf("Expected Node to be in Leader state, got: %s", state)
+	}
+	if curLeader := waitForLeader(node, node.Id()); curLeader != node.Id() {
+		t.Fatalf("Expected us to be leader, got: %s\n", curLeader)
+	}
+	if node.CurrentTerm() != vreq.Term {
+		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
+			vreq.Term, node.CurrentTerm())
+	}
+
+	// Test persistent state
+	testStateOfNode(t, node)
+
+	// Change log permissions to cause error
+	if err := os.Chmod(node.logPath, 0400); err != nil {
+		t.Fatalf("Unable to change log permissions: %v", err)
+	}
+
+	// Send an heartbeat with higher term, which should cause the current leader
+	// to step down.
+	sendAndWait(node, &pb.Heartbeat{Term: newTerm + 10, Leader: "other"})
+
+	// Server should stepdown
+	if state := waitForState(node, FOLLOWER); state != FOLLOWER {
+		t.Fatalf("Expected Node to be in Follower state, got %s", state)
+	}
+
+	// Reset the permission
+	os.Chmod(node.logPath, 0660)
 }

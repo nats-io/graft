@@ -48,19 +48,7 @@ func TestNatsLeaderElection(t *testing.T) {
 	}
 
 	// Wait for Election
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-
-	leaders, followers, candidates := countTypes(nodes)
-
-	if leaders != 1 {
-		t.Fatalf("Expected 1 Leader, got %d\n", leaders)
-	}
-	if followers != toStart-1 {
-		t.Fatalf("Expected %d Followers, got %d\n", toStart-1, followers)
-	}
-	if candidates != 0 {
-		t.Fatalf("Expected 0 Candidates, got %d\n", candidates)
-	}
+	expectedClusterState(t, nodes, 1, toStart-1, 0)
 
 	// Make sure he stays the leader (heartbeat functionality)
 	leader := findLeader(nodes)
@@ -77,17 +65,5 @@ func TestNatsLeaderElection(t *testing.T) {
 	leader.Close()
 
 	// Wait for Election
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-
-	leaders, followers, candidates = countTypes(nodes)
-
-	if leaders != 1 {
-		t.Fatalf("Expected 1 Leader, got %d\n", leaders)
-	}
-	if followers != toStart-2 {
-		t.Fatalf("Expected %d Followers, got %d\n", toStart-2, followers)
-	}
-	if candidates != 0 {
-		t.Fatalf("Expected 0 Candidates, got %d\n", candidates)
-	}
+	expectedClusterState(t, nodes, 1, toStart-2, 0)
 }
