@@ -136,7 +136,6 @@ func TestCandidateState(t *testing.T) {
 	defer node.Close()
 
 	// Should move to candidate state within MAX_ELECTION_TIMEOUT
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 	if state := waitForState(node, CANDIDATE); state != CANDIDATE {
 		t.Fatalf("Expected node to move to Candidate state, got: %s", state)
 	}
@@ -156,14 +155,12 @@ func TestLeaderState(t *testing.T) {
 	defer node.Close()
 
 	// Should move to leader state within MAX_ELECTION_TIMEOUT
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-	if state := node.State(); state != LEADER {
+	if state := waitForState(node, LEADER); state != LEADER {
 		t.Fatalf("Expected node to move to Leader state, got: %s", state)
 	}
 	if stateStr := node.State().String(); stateStr != "Leader" {
 		t.Fatalf("Expected node to move to Leader state, got: %s", stateStr)
 	}
-
 }
 
 func TestSimpleLeaderElection(t *testing.T) {
@@ -174,19 +171,7 @@ func TestSimpleLeaderElection(t *testing.T) {
 		defer n.Close()
 	}
 
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-
-	leaders, followers, candidates := countTypes(nodes)
-
-	if leaders != 1 {
-		t.Fatalf("Expected 1 Leader, got %d\n", leaders)
-	}
-	if followers != toStart-1 {
-		t.Fatalf("Expected %d Followers, got %d\n", toStart-1, followers)
-	}
-	if candidates != 0 {
-		t.Fatalf("Expected 0 Candidates, got %d\n", candidates)
-	}
+	expectedClusterState(t, nodes, 1, toStart-1, 0)
 }
 
 func TestStaggeredStart(t *testing.T) {
@@ -210,7 +195,6 @@ func TestStaggeredStart(t *testing.T) {
 
 func TestDownToOneAndBack(t *testing.T) {
 	nodes := createNodes(t, "downtoone", 3)
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 1, 2, 0)
 
 	// Do cleanup
@@ -221,7 +205,6 @@ func TestDownToOneAndBack(t *testing.T) {
 	// find and kill the leader
 	leader := findLeader(nodes)
 	leader.Close()
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 1, 1, 0)
 
 	// start a new process in the leader's place
@@ -235,19 +218,16 @@ func TestDownToOneAndBack(t *testing.T) {
 	}
 	defer newNode.Close()
 	nodes = append(nodes, newNode)
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 1, 2, 0)
 
 	// find and kill the new leader
 	leader = findLeader(nodes)
 	leader.Close()
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 1, 1, 0)
 
 	// find the leader again and kill it
 	leader = findLeader(nodes)
 	leader.Close()
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 	expectedClusterState(t, nodes, 0, 0, 1)
 
 	// grab the surviving node, we'll want to compare term numbers
@@ -273,7 +253,6 @@ func TestDownToOneAndBack(t *testing.T) {
 		nodes = append(nodes, node)
 		defer node.Close()
 	}
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 
 	// we expect to be in a consistent state and for terms to match
 	expectedClusterState(t, nodes, 1, 2, 0)
@@ -299,20 +278,9 @@ func TestReElection(t *testing.T) {
 		t.Fatal("Could not find a leader!\n")
 	}
 	leader.Close()
-	time.Sleep(MAX_ELECTION_TIMEOUT)
 
 	// Make sure we have another leader.
-	leaders, followers, candidates := countTypes(nodes)
-
-	if leaders != 1 {
-		t.Fatalf("Expected 1 Leader, got %d\n", leaders)
-	}
-	if followers != toStart-2 {
-		t.Fatalf("Expected %d Followers, got %d\n", toStart-2, followers)
-	}
-	if candidates != 0 {
-		t.Fatalf("Expected 0 Candidates, got %d\n", candidates)
-	}
+	expectedClusterState(t, nodes, 1, toStart-2, 0)
 }
 
 func TestNetworkSplit(t *testing.T) {
@@ -324,19 +292,8 @@ func TestNetworkSplit(t *testing.T) {
 		defer n.Close()
 	}
 
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-
 	// Make sure we have correct count.
-	leaders, followers, _ := countTypes(nodes)
-
-	if leaders != 1 {
-		t.Fatal("Expected a leader")
-	}
-	expectedFollowers := clusterSize - 1
-	if followers != expectedFollowers {
-		t.Fatalf("Expected %d followers, got %d",
-			expectedFollowers, followers)
-	}
+	expectedClusterState(t, nodes, 1, clusterSize-1, 0)
 
 	// Simulate a network split. We will pick the leader and 1 follower
 	// to be in one group, all others will be in the other.
@@ -354,27 +311,11 @@ func TestNetworkSplit(t *testing.T) {
 	// Split the nodes in two..
 	mockSplitNetwork(grp)
 
-	// Wait on election timeout
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-
 	// Make sure we have another leader.
-	leaders, followers, _ = countTypes(nodes)
-
-	if leaders != 2 {
-		t.Fatalf("Expected 2 leaders, got %d\n", leaders)
-	}
+	expectedClusterState(t, nodes, 2, clusterSize-2, 0)
 
 	// Restore Communications
 	mockRestoreNetwork()
 
-	time.Sleep(MAX_ELECTION_TIMEOUT)
-
-	leaders, followers, _ = countTypes(nodes)
-	if leaders != 1 {
-		t.Fatal("Expected a leader")
-	}
-	if followers != expectedFollowers {
-		t.Fatalf("Expected %d followers, got %d",
-			expectedFollowers, followers)
-	}
+	expectedClusterState(t, nodes, 1, clusterSize-1, 0)
 }

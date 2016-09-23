@@ -3,9 +3,16 @@
 package graft
 
 import (
+	"fmt"
 	"io/ioutil"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
+)
+
+const (
+	clusterFormationTimeout = MAX_ELECTION_TIMEOUT + 100*time.Millisecond
 )
 
 type dummyHandler struct {
@@ -13,6 +20,23 @@ type dummyHandler struct {
 
 func (*dummyHandler) AsyncError(err error)       {}
 func (*dummyHandler) StateChange(from, to State) {}
+
+func stackFatalf(t *testing.T, f string, args ...interface{}) {
+	lines := make([]string, 0, 32)
+	msg := fmt.Sprintf(f, args...)
+	lines = append(lines, msg)
+
+	// Generate the Stack of callers: Skip us and verify* frames.
+	for i := 1; true; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		msg := fmt.Sprintf("%d - %s:%d", i, file, line)
+		lines = append(lines, msg)
+	}
+	t.Fatalf("%s", strings.Join(lines, "\n"))
+}
 
 func genNodeArgs(t *testing.T) (Handler, RPCDriver, string) {
 	hand := &dummyHandler{}
@@ -72,12 +96,21 @@ func firstFollower(nodes []*Node) *Node {
 }
 
 func expectedClusterState(t *testing.T, nodes []*Node, leaders, followers, candidates int) {
-	currentLeaders, currentFollowers, currentCandidates := countTypes(nodes)
-	switch {
-	case leaders != currentLeaders, followers != currentFollowers, candidates != currentCandidates:
-		t.Fatalf("Cluster doesn't match expect state: expected %d leaders, %d followers, %d candidates, actual %d Leaders, %d followers, %d candidates\n",
-			leaders, followers, candidates, currentLeaders, currentFollowers, currentCandidates)
+	var currentLeaders, currentFollowers, currentCandidates int
+	end := time.Now().Add(clusterFormationTimeout)
+	for time.Now().Before(end) {
+		currentLeaders, currentFollowers, currentCandidates = countTypes(nodes)
+		switch {
+		case leaders != currentLeaders, followers != currentFollowers, candidates != currentCandidates:
+			time.Sleep(5 * time.Millisecond)
+			continue
+		default:
+			return
+		}
 	}
+	stackFatalf(t, "Cluster doesn't match expect state: expected %d leaders, %d followers, %d candidates, "+
+		"actual %d Leaders, %d followers, %d candidates\n",
+		leaders, followers, candidates, currentLeaders, currentFollowers, currentCandidates)
 }
 
 func waitForLeader(node *Node, expectedLeader string) string {
