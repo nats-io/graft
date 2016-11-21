@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/nats-io/gnatsd/test"
-	"github.com/nats-io/nats"
+	"github.com/nats-io/go-nats"
 )
 
 func createNatsNodes(t *testing.T, name string, numNodes int) []*Node {
