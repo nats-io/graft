@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/nats-io/go-nats"
+	"github.com/nats-io/go-nats/encoders/protobuf"
 	"github.com/nats-io/graft/pb"
-	"github.com/nats-io/nats"
-	"github.com/nats-io/nats/encoders/protobuf"
 )
 
 // The subject space for the nats rpc driver is based on the
