@@ -174,7 +174,7 @@ func TestVoteRequestAsFollowerLogBehind(t *testing.T) {
 	// Test persistent state
 	testStateOfNode(t, node)
 
-	// a VoteRequest with a higher term should reset follower
+	// a VoteRequest with a log that is ahead should reset follower
 	binary.BigEndian.PutUint32(pos, newPosition+1)
 	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, LogPosition: pos}
 	vresp = <-fake.VoteResponses
