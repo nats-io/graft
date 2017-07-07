@@ -5,6 +5,8 @@ package graft
 // ChanHandler is a convenience handler when a user wants to simply use
 // channels for the async handling of errors and state changes.
 type ChanHandler struct {
+	LogPositionHandler
+
 	// Chan to receive state changes.
 	stateChangeChan chan<- StateChange
 	// Chan to receive errors.
@@ -20,10 +22,11 @@ type StateChange struct {
 	To State
 }
 
-func NewChanHandler(scCh chan<- StateChange, errCh chan<- error) *ChanHandler {
+func NewChanHandler(logHandler LogPositionHandler, scCh chan<- StateChange, errCh chan<- error) *ChanHandler {
 	return &ChanHandler{
-		stateChangeChan: scCh,
-		errorChan:       errCh,
+		LogPositionHandler: logHandler,
+		stateChangeChan:    scCh,
+		errorChan:          errCh,
 	}
 }
 

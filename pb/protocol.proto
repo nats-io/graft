@@ -1,7 +1,7 @@
-// Copyright 2016 Apcera Inc. All rights reserved.
+// Copyright 2017 Apcera Inc. All rights reserved.
 //
 // Uses https://github.com/gogo/protobuf
-// compiled via `protoc -I=. -I=$GOPATH/src  --gogofaster_out=. protocol.proto`
+// compiled via `protoc -I=. -I=$GOPATH/src --gofast_out=. protocol.proto`
 
 syntax = "proto3";
 package pb;
@@ -15,8 +15,9 @@ option (gogoproto.goproto_getters_all) = false;
 
 // VoteRequest
 message VoteRequest {
-  uint64 Term      = 1; // Term for the candidate.
-  string Candidate = 2; // The candidate for the election.
+  uint64 Term        = 1; // Term for the candidate.
+  string Candidate   = 2; // The candidate for the election.
+  bytes  LogPosition = 3; // Candidate's opaque position in the log.
 }
 
 // VoteResponse

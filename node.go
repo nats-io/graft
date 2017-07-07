@@ -1,4 +1,6 @@
-// Copyright 2013-2016 Apcera Inc. All rights reserved.
+// Copyright 2013-2017 Apcera Inc. All rights reserved.
+
+//go:generate protoc -I=. -I=$GOPATH/src --gofast_out=. ./pb/protocol.proto
 
 // Graft is a RAFT implementation.
 // Currently only the election functionality is supported.
@@ -78,8 +80,24 @@ type ClusterInfo struct {
 	Size int
 }
 
+// LogPositionHandler is used to interrogate the state of the log.
+type LogPositionHandler interface {
+	// CurrentLogPosition returns an opaque byte slice that represents the
+	// current position in the node's log.
+	CurrentLogPosition() []byte
+
+	// GrantVote is called when a candidate peer has requested a vote. The
+	// peer's log position is passed as an opaque byte slice as returned by
+	// CurrentLogPosition. The returned bool determines if the vote should be
+	// granted because the candidate's log is at least as up-to-date as the
+	// receiver's log.
+	GrantVote(position []byte) bool
+}
+
 // A Handler can process async callbacks from a Graft node.
 type Handler interface {
+	LogPositionHandler
+
 	// Process async errors that are encountered by the node.
 	AsyncError(error)
 
@@ -247,8 +265,9 @@ func (n *Node) runAsCandidate() {
 
 	// Initiate an Election
 	vreq := &pb.VoteRequest{
-		Term:      n.term,
-		Candidate: n.id,
+		Term:        n.term,
+		Candidate:   n.id,
+		LogPosition: n.handler.CurrentLogPosition(),
 	}
 	// Collect the votes.
 	// We will vote for ourselves, so start at 1.
@@ -439,14 +458,11 @@ func (n *Node) handleVoteRequest(vreq *pb.VoteRequest) bool {
 
 	deny := &pb.VoteResponse{Term: n.term, Granted: false}
 
-	// Old term, reject
-	if vreq.Term < n.term {
+	// Old term or candidate's log is behind, reject
+	if vreq.Term < n.term || !n.handler.GrantVote(vreq.LogPosition) {
 		n.rpc.SendVoteResponse(vreq.Candidate, deny)
 		return false
 	}
-
-	// Save state flag
-	saveState := false
 
 	// This will trigger a return from the current runAs loop.
 	stepDown := false
@@ -457,7 +473,6 @@ func (n *Node) handleVoteRequest(vreq *pb.VoteRequest) bool {
 		n.vote = NO_VOTE
 		n.leader = NO_LEADER
 		stepDown = true
-		saveState = true
 	}
 
 	// If we are the Leader, deny request unless we have seen
@@ -477,17 +492,15 @@ func (n *Node) handleVoteRequest(vreq *pb.VoteRequest) bool {
 
 	n.setVote(vreq.Candidate)
 
-	// Write our state if needed.
-	if saveState {
-		if err := n.writeState(); err != nil {
-			// We have failed to update our state. Process the error
-			// and deny the vote.
-			n.handleError(err)
-			n.setVote(NO_VOTE)
-			n.rpc.SendVoteResponse(vreq.Candidate, deny)
-			n.resetElectionTimeout()
-			return true
-		}
+	// Write our state.
+	if err := n.writeState(); err != nil {
+		// We have failed to update our state. Process the error
+		// and deny the vote.
+		n.handleError(err)
+		n.setVote(NO_VOTE)
+		n.rpc.SendVoteResponse(vreq.Candidate, deny)
+		n.resetElectionTimeout()
+		return true
 	}
 
 	// Send our acceptance.

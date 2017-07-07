@@ -1,8 +1,9 @@
-// Copyright 2013-2016 Apcera Inc. All rights reserved.
+// Copyright 2013-2017 Apcera Inc. All rights reserved.
 
 package graft
 
 import (
+	"encoding/binary"
 	"os"
 	"testing"
 	"time"
@@ -108,6 +109,92 @@ func TestVoteRequestAsFollower(t *testing.T) {
 	if node.CurrentTerm() != newTerm {
 		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
 			newTerm, node.CurrentTerm())
+	}
+	if node.vote == NO_VOTE {
+		t.Fatal("Expected to have a cast vote at this point")
+	}
+
+	// Test persistent state
+	testStateOfNode(t, node)
+}
+
+func TestVoteRequestAsFollowerLogBehind(t *testing.T) {
+	ci := ClusterInfo{Name: "vreq", Size: 3}
+	_, rpc, log := genNodeArgs(t)
+	lpHandler := &logPositionHandler{}
+	scCh := make(chan StateChange)
+	errCh := make(chan error)
+	handler := NewChanHandler(lpHandler, scCh, errCh)
+	node, err := New(ci, handler, rpc, log)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	defer node.Close()
+
+	// Set log position to artificial higher value.
+	newPosition := uint32(8)
+	term := uint64(1)
+	lpHandler.logIndex = newPosition
+	node.setTerm(term)
+
+	// Force write of state
+	node.writeState()
+
+	// Create fake node to watch VoteResponses.
+	fake := fakeNode("fake")
+
+	// Hook up to MockRPC layer
+	mockRegisterPeer(fake)
+	defer mockUnregisterPeer(fake.id)
+
+	// a VoteRequest with a log that is behind should be ignored
+	pos := make([]byte, 4)
+	binary.BigEndian.PutUint32(pos, 1)
+	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, LogPosition: pos}
+	vresp := <-fake.VoteResponses
+	if vresp.Term != term {
+		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
+			term, vresp.Term)
+	}
+	if vresp.Granted != false {
+		t.Fatal("Expected the VoteResponse to have Granted of false")
+	}
+	// Make sure no changes to node
+	if state := node.State(); state != FOLLOWER {
+		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
+	}
+	if node.Leader() != NO_LEADER {
+		t.Fatalf("Expected no leader, got: %s\n", node.Leader())
+	}
+	if node.CurrentTerm() != term {
+		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
+			term, node.CurrentTerm())
+	}
+
+	// Test persistent state
+	testStateOfNode(t, node)
+
+	// a VoteRequest with a higher term should reset follower
+	binary.BigEndian.PutUint32(pos, newPosition+1)
+	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, LogPosition: pos}
+	vresp = <-fake.VoteResponses
+	if vresp.Term != term {
+		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
+			term, vresp.Term)
+	}
+	if vresp.Granted == false {
+		t.Fatal("Expected the VoteResponse to have been Granted")
+	}
+	// Verify new state
+	if state := node.State(); state != FOLLOWER {
+		t.Fatalf("Expected Node to be in Follower state, got: %s", state)
+	}
+	if node.Leader() != NO_LEADER {
+		t.Fatalf("Expected no leader, got: %s\n", node.Leader())
+	}
+	if node.CurrentTerm() != term {
+		t.Fatalf("Expected CurrentTerm of %d, got: %d\n",
+			term, node.CurrentTerm())
 	}
 	if node.vote == NO_VOTE {
 		t.Fatal("Expected to have a cast vote at this point")

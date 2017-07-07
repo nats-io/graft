@@ -18,8 +18,10 @@ const (
 type dummyHandler struct {
 }
 
-func (*dummyHandler) AsyncError(err error)       {}
-func (*dummyHandler) StateChange(from, to State) {}
+func (*dummyHandler) AsyncError(err error)           {}
+func (*dummyHandler) StateChange(from, to State)     {}
+func (*dummyHandler) CurrentLogPosition() []byte     { return nil }
+func (*dummyHandler) GrantVote(position []byte) bool { return true }
 
 func stackFatalf(t *testing.T, f string, args ...interface{}) {
 	lines := make([]string, 0, 32)

@@ -1,8 +1,9 @@
-// Copyright 2013-2016 Apcera Inc. All rights reserved.
+// Copyright 2013-2017 Apcera Inc. All rights reserved.
 
 package graft
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,6 +12,20 @@ import (
 
 	"github.com/nats-io/graft/pb"
 )
+
+type logPositionHandler struct {
+	logIndex uint32
+}
+
+func (l *logPositionHandler) CurrentLogPosition() []byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, l.logIndex)
+	return buf
+}
+
+func (l *logPositionHandler) GrantVote(position []byte) bool {
+	return binary.BigEndian.Uint32(position) >= l.logIndex
+}
 
 // Dumb wait program to sync on callbacks, etc... Will timeout
 func wait(t *testing.T, ch chan StateChange) *StateChange {
@@ -43,7 +58,8 @@ func TestStateChangeHandler(t *testing.T) {
 	// Use ChanHandler
 	scCh := make(chan StateChange)
 	errCh := make(chan error)
-	chHand := NewChanHandler(scCh, errCh)
+	lpHandler := &logPositionHandler{}
+	chHand := NewChanHandler(lpHandler, scCh, errCh)
 
 	node, err := New(ci, chHand, rpc, log)
 	if err != nil {
@@ -78,7 +94,8 @@ func TestErrorHandler(t *testing.T) {
 	// Use ChanHandler
 	scCh := make(chan StateChange)
 	errCh := make(chan error)
-	chHand := NewChanHandler(scCh, errCh)
+	lpHandler := &logPositionHandler{}
+	chHand := NewChanHandler(lpHandler, scCh, errCh)
 
 	node, err := New(ci, chHand, rpc, log)
 	if err != nil {
@@ -111,7 +128,8 @@ func TestChandHandlerNotBlockingNode(t *testing.T) {
 	// Use ChanHandler
 	scCh := make(chan StateChange)
 	errCh := make(chan error)
-	chHand := NewChanHandler(scCh, errCh)
+	lpHandler := &logPositionHandler{}
+	chHand := NewChanHandler(lpHandler, scCh, errCh)
 
 	node, err := New(ci, chHand, rpc, log)
 	if err != nil {
