@@ -13,6 +13,20 @@ import (
 
 // Test VoteRequests RPC in different states.
 
+type stateMachineHandler struct {
+	logIndex uint32
+}
+
+func (s *stateMachineHandler) CurrentState() []byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, s.logIndex)
+	return buf
+}
+
+func (s *stateMachineHandler) GrantVote(position []byte) bool {
+	return binary.BigEndian.Uint32(position) >= s.logIndex
+}
+
 func vreqNode(t *testing.T, expected int) *Node {
 	ci := ClusterInfo{Name: "vreq", Size: expected}
 	hand, rpc, log := genNodeArgs(t)
@@ -121,10 +135,10 @@ func TestVoteRequestAsFollower(t *testing.T) {
 func TestVoteRequestAsFollowerLogBehind(t *testing.T) {
 	ci := ClusterInfo{Name: "vreq", Size: 3}
 	_, rpc, log := genNodeArgs(t)
-	lpHandler := &logPositionHandler{}
+	stateHandler := new(stateMachineHandler)
 	scCh := make(chan StateChange)
 	errCh := make(chan error)
-	handler := NewChanHandler(lpHandler, scCh, errCh)
+	handler := NewChanHandlerWithStateMachine(stateHandler, scCh, errCh)
 	node, err := New(ci, handler, rpc, log)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -134,7 +148,7 @@ func TestVoteRequestAsFollowerLogBehind(t *testing.T) {
 	// Set log position to artificial higher value.
 	newPosition := uint32(8)
 	term := uint64(1)
-	lpHandler.logIndex = newPosition
+	stateHandler.logIndex = newPosition
 	node.setTerm(term)
 
 	// Force write of state
@@ -150,7 +164,7 @@ func TestVoteRequestAsFollowerLogBehind(t *testing.T) {
 	// a VoteRequest with a log that is behind should be ignored
 	pos := make([]byte, 4)
 	binary.BigEndian.PutUint32(pos, 1)
-	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, LogPosition: pos}
+	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, CurrentState: pos}
 	vresp := <-fake.VoteResponses
 	if vresp.Term != term {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",
@@ -176,7 +190,7 @@ func TestVoteRequestAsFollowerLogBehind(t *testing.T) {
 
 	// a VoteRequest with a log that is ahead should reset follower
 	binary.BigEndian.PutUint32(pos, newPosition+1)
-	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, LogPosition: pos}
+	node.VoteRequests <- &pb.VoteRequest{Term: term, Candidate: fake.id, CurrentState: pos}
 	vresp = <-fake.VoteResponses
 	if vresp.Term != term {
 		t.Fatalf("Expected the VoteResponse to have term=%d, got %d\n",

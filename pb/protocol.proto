@@ -15,9 +15,9 @@ option (gogoproto.goproto_getters_all) = false;
 
 // VoteRequest
 message VoteRequest {
-  uint64 Term        = 1; // Term for the candidate.
-  string Candidate   = 2; // The candidate for the election.
-  bytes  LogPosition = 3; // Candidate's opaque position in the log.
+  uint64 Term         = 1; // Term for the candidate.
+  string Candidate    = 2; // The candidate for the election.
+  bytes  CurrentState = 3; // Candidate's opaque position in the state machine.
 }
 
 // VoteResponse
