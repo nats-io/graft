@@ -1,4 +1,4 @@
-// Copyright 2013-2016 Apcera Inc. All rights reserved.
+// Copyright 2013-2017 Apcera Inc. All rights reserved.
 
 package graft
 
@@ -18,8 +18,10 @@ const (
 type dummyHandler struct {
 }
 
-func (*dummyHandler) AsyncError(err error)       {}
-func (*dummyHandler) StateChange(from, to State) {}
+func (*dummyHandler) AsyncError(err error)        {}
+func (*dummyHandler) StateChange(from, to State)  {}
+func (*dummyHandler) CurrentState() []byte        { return nil }
+func (*dummyHandler) GrantVote(state []byte) bool { return true }
 
 func stackFatalf(t *testing.T, f string, args ...interface{}) {
 	lines := make([]string, 0, 32)
