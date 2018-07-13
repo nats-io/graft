@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/nats-io/graft/pb"
+	"github.com/nedscode/graft/pb"
 )
 
 var mu sync.Mutex
