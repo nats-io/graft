@@ -39,6 +39,7 @@ message VoteResponse {
 
 // Heartbeat
 message Heartbeat {
-  uint64 Term    = 1; // Leader's current term.
-  string Leader  = 2; // Leaders id.
+  uint64 Term     = 1; // Leader's current term.
+  string Leader   = 2; // Leaders id.
+  uint64 NodeSize = 3; // The number of nodes that the raft should be
 }

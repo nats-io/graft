@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nats-io/graft/pb"
+	"github.com/nedscode/graft/pb"
 )
 
 type Node struct {
@@ -260,7 +260,7 @@ func (n *Node) runAsLeader() {
 		// Heartbeat tick. Send an HB each time.
 		case <-hb.C:
 			// Send a heartbeat
-			n.rpc.HeartBeat(&pb.Heartbeat{Term: n.term, Leader: n.id})
+			n.rpc.HeartBeat(&pb.Heartbeat{Term: n.term, Leader: n.id, NodeSize: uint64(n.info.Size)})
 
 		// A Vote Request.
 		case vreq := <-n.VoteRequests:
@@ -472,6 +472,14 @@ func (n *Node) handleHeartBeat(hb *pb.Heartbeat) bool {
 			n.handleError(err)
 			stepDown = true
 		}
+	}
+
+	// Update our node size based on what the leader tells us
+	leaderNodeSize := int(hb.NodeSize)
+	if leaderNodeSize > 0 && leaderNodeSize != n.info.Size {
+		n.mu.Lock()
+		defer n.mu.Unlock()
+		n.info.Size = leaderNodeSize
 	}
 
 	return stepDown
@@ -715,4 +723,21 @@ func (n *Node) LogPath() string {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return n.logPath
+}
+
+// SetSize sets the raft size if the node is the Leader, otherwise it does nothing.
+// Followers set their size as part of the heartbeat
+// Utilise this as part of autoscale events to have the Leader specify the new raft size
+// Returns whether the size was changed
+func (n *Node) SetSize(size int) bool {
+	if n.State() != LEADER {
+		return false
+	}
+	if n.info.Size == size {
+		return false
+	}
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.info.Size = size
+	return true
 }
