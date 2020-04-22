@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	VERSION = "0.4"
+	VERSION = "0.5"
 
 	// Election timeout MIN and MAX per RAFT spec suggestion.
 	MIN_ELECTION_TIMEOUT = 500 * time.Millisecond
