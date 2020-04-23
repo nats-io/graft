@@ -1,12 +1,13 @@
 language: go
 sudo: false
 go:
-- 1.9.x
-- 1.10.x
+- 1.14.x
+- 1.13.x
+go_import_path: github.com/nats-io/graft
 
 install:
 - go get -t ./...
-- go get github.com/nats-io/gnatsd
+- go get github.com/nats-io/nats-server/v2
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
 

@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats/encoders/protobuf"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/encoders/protobuf"
 	"github.com/nats-io/graft/pb"
 )
 
