@@ -1,4 +1,4 @@
-// Copyright 2013-2018 The NATS Authors
+// Copyright 2013-2020 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,11 +22,11 @@ import (
 func TestNew(t *testing.T) {
 	// Test bad ClusterInfos
 	bci := ClusterInfo{Name: "", Size: 5}
-	if _, err := New(bci, nil, nil, ""); err == nil || err != ClusterNameErr {
+	if _, err := New(bci, nil, nil, ""); err == nil || err != ErrClusterName {
 		t.Fatal("Expected an error with empty cluster name")
 	}
 	bci = ClusterInfo{Name: "foo", Size: 0}
-	if _, err := New(bci, nil, nil, ""); err == nil || err != ClusterSizeErr {
+	if _, err := New(bci, nil, nil, ""); err == nil || err != ErrClusterSize {
 		t.Fatal("Expected an error with empty cluster name")
 	}
 
@@ -34,14 +34,14 @@ func TestNew(t *testing.T) {
 	ci := ClusterInfo{Name: "foo", Size: 3}
 
 	// Handler is required
-	if _, err := New(ci, nil, nil, ""); err == nil || err != HandlerReqErr {
+	if _, err := New(ci, nil, nil, ""); err == nil || err != ErrHandlerReq {
 		t.Fatal("Expected an error with no handler argument")
 	}
 
 	hand, rpc, log := genNodeArgs(t)
 
 	// rpcDriver is required
-	if _, err := New(ci, hand, nil, ""); err == nil || err != RpcDriverReqErr {
+	if _, err := New(ci, hand, nil, ""); err == nil || err != ErrRpcDriverReq {
 		t.Fatal("Expected an error with no rpcDriver argument")
 	}
 
@@ -58,7 +58,7 @@ func TestNew(t *testing.T) {
 	}
 
 	// log is required
-	if _, err := New(ci, hand, rpc, ""); err == nil || err != LogReqErr {
+	if _, err := New(ci, hand, rpc, ""); err == nil || err != ErrLogReq {
 		t.Fatal("Expected an error with no log argument")
 	}
 

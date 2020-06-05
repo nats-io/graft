@@ -1,4 +1,4 @@
-// Copyright 2013-2018 The NATS Authors
+// Copyright 2013-2020 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -30,7 +30,7 @@ func TestLogPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create tmp dir")
 	}
-	file, err := ioutil.TempFile(tmpDir, "_log")
+	file, _ := ioutil.TempFile(tmpDir, "_log")
 	os.Chmod(tmpDir, 0400)
 
 	defer file.Close()
@@ -170,7 +170,7 @@ func TestCorruption(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected an error reading corrupt state")
 	}
-	if err != LogCorruptErr {
+	if err != ErrLogCorrupt {
 		t.Fatalf("Expected corrupt error, got %q", err)
 	}
 }

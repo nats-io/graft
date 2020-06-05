@@ -1,4 +1,4 @@
-// Copyright 2013-2018 The NATS Authors
+// Copyright 2013-2020 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -39,7 +39,7 @@ func (n *Node) initLog(path string) error {
 	n.logPath = path
 
 	ps, err := n.readState(path)
-	if err != nil && err != LogNoStateErr {
+	if err != nil && err != ErrLogNoState {
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (n *Node) readState(path string) (*persistentState, error) {
 		return nil, err
 	}
 	if len(buf) <= 0 {
-		return nil, LogNoStateErr
+		return nil, ErrLogNoState
 	}
 
 	env := &envelope{}
@@ -102,7 +102,7 @@ func (n *Node) readState(path string) (*persistentState, error) {
 	// Test for corruption
 	sha := sha1.New().Sum(env.Data)
 	if !bytes.Equal(sha, env.SHA) {
-		return nil, LogCorruptErr
+		return nil, ErrLogCorrupt
 	}
 
 	ps := &persistentState{}

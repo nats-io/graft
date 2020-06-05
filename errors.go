@@ -1,4 +1,4 @@
-// Copyright 2013-2018 The NATS Authors
+// Copyright 2013-2020 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,13 +18,13 @@ import (
 )
 
 var (
-	ClusterNameErr  = errors.New("graft: Cluster name can not be empty")
-	ClusterSizeErr  = errors.New("graft: Cluster size can not be 0")
-	HandlerReqErr   = errors.New("graft: Handler is required")
-	RpcDriverReqErr = errors.New("graft: RPCDriver is required")
-	LogReqErr       = errors.New("graft: Log is required")
-	LogNoExistErr   = errors.New("graft: Log file does not exist")
-	LogNoStateErr   = errors.New("graft: Log file does not have any state")
-	LogCorruptErr   = errors.New("graft: Encountered corrupt log file")
-	NotImplErr      = errors.New("graft: Not implemented")
+	ErrClusterName  = errors.New("graft: Cluster name can not be empty")
+	ErrClusterSize  = errors.New("graft: Cluster size can not be 0")
+	ErrHandlerReq   = errors.New("graft: Handler is required")
+	ErrRpcDriverReq = errors.New("graft: RPCDriver is required")
+	ErrLogReq       = errors.New("graft: Log is required")
+	ErrLogNoExist   = errors.New("graft: Log file does not exist")
+	ErrLogNoState   = errors.New("graft: Log file does not have any state")
+	ErrLogCorrupt   = errors.New("graft: Encountered corrupt log file")
+	ErrNotImpl      = errors.New("graft: Not implemented")
 )

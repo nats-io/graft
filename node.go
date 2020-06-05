@@ -1,4 +1,4 @@
-// Copyright 2013-2018 The NATS Authors
+// Copyright 2013-2020 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -203,20 +203,20 @@ func (n *Node) clearTimers() {
 func checkArgs(info ClusterInfo, handler Handler, rpc RPCDriver, logPath string) error {
 	// Check ClusterInfo
 	if info.Name == "" {
-		return ClusterNameErr
+		return ErrClusterName
 	}
 	if info.Size == 0 {
-		return ClusterSizeErr
+		return ErrClusterSize
 	}
 	// Make sure we have non-nil args
 	if handler == nil {
-		return HandlerReqErr
+		return ErrHandlerReq
 	}
 	if rpc == nil {
-		return RpcDriverReqErr
+		return ErrRpcDriverReq
 	}
 	if logPath == "" {
-		return LogReqErr
+		return ErrLogReq
 	}
 	return nil
 }

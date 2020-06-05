@@ -1,4 +1,4 @@
-// Copyright 2013-2018 The NATS Authors
+// Copyright 2013-2020 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/nats-io/graft/pb"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/encoders/protobuf"
-	"github.com/nats-io/graft/pb"
 )
 
 // The subject space for the nats rpc driver is based on the
@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	NotInitializedErr = errors.New("graft(nats_rpc): Driver is not properly initialized")
+	ErrNotInitialized = errors.New("graft(nats_rpc): Driver is not properly initialized")
 )
 
 // NatsRpcDriver is an implementation of the RPCDriver using NATS.
@@ -180,7 +180,7 @@ func (rpc *NatsRpcDriver) HeartBeat(hb *pb.Heartbeat) error {
 	defer rpc.Unlock()
 
 	if rpc.hbSub == nil {
-		return NotInitializedErr
+		return ErrNotInitialized
 	}
 	return rpc.ec.Publish(rpc.hbSub.Subject, hb)
 }
