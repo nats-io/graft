@@ -390,7 +390,7 @@ func (n *Node) runAsFollower() {
 		// Process a LEADER's heartbeat.
 		case hb := <-n.HeartBeats:
 			// Set the Leader regardless if we currently have none set.
-			if n.leader == NO_LEADER {
+			if n.Leader() == NO_LEADER {
 				n.setLeader(hb.Leader)
 			}
 			// Just set Leader if asked to stepdown.
@@ -494,9 +494,9 @@ func (n *Node) handleVoteRequest(vreq *pb.VoteRequest) bool {
 
 	// Newer term
 	if vreq.Term > n.term {
-		n.term = vreq.Term
-		n.vote = NO_VOTE
-		n.leader = NO_LEADER
+		n.setTerm(vreq.Term)
+		n.setVote(NO_VOTE)
+		n.setLeader(NO_LEADER)
 		stepDown = true
 	}
 
