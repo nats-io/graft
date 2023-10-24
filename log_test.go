@@ -1,4 +1,4 @@
-// Copyright 2013-2020 The NATS Authors
+// Copyright 2013-2023 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,7 +15,6 @@ package graft
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -26,11 +25,8 @@ func TestLogPermissions(t *testing.T) {
 	hand, rpc, log := genNodeArgs(t)
 	// remove it
 	os.Remove(log)
-	tmpDir, err := ioutil.TempDir("", "_grafty")
-	if err != nil {
-		t.Fatal("Could not create tmp dir")
-	}
-	file, _ := ioutil.TempFile(tmpDir, "_log")
+	tmpDir := t.TempDir()
+	file, _ := os.CreateTemp(tmpDir, "_log")
 	os.Chmod(tmpDir, 0400)
 
 	defer file.Close()
@@ -147,7 +143,7 @@ func TestCorruption(t *testing.T) {
 	testStateOfNode(t, node)
 
 	// Now introduce some corruption
-	buf, err := ioutil.ReadFile(node.logPath)
+	buf, err := os.ReadFile(node.logPath)
 	if err != nil {
 		t.Fatalf("Could not read logfile: %v", err)
 	}
@@ -158,10 +154,10 @@ func TestCorruption(t *testing.T) {
 	env.Data = []byte("ZZZZ")
 	toWrite, err := json.Marshal(env)
 	if err != nil {
-		t.Fatalf("Error Marshalling envelope: %v", err)
+		t.Fatalf("Error Marshaling envelope: %v", err)
 	}
 
-	if err := ioutil.WriteFile(node.logPath, toWrite, 0660); err != nil {
+	if err := os.WriteFile(node.logPath, toWrite, 0660); err != nil {
 		t.Fatalf("Error writing envelope: %v", err)
 	}
 

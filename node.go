@@ -1,4 +1,4 @@
-// Copyright 2013-2020 The NATS Authors
+// Copyright 2013-2023 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -600,7 +600,7 @@ func (n *Node) postStateChange(sc *StateChange) {
 	}()
 }
 
-// Process a state transistion. Assume lock is held on entrance.
+// Process a state transition. Assume lock is held on entrance.
 // Call the async handler in a separate Go routine.
 func (n *Node) switchState(state State) {
 	if state == n.state {
