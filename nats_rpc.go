@@ -71,6 +71,15 @@ func NewNatsRpc(opts *nats.Options) (*NatsRpcDriver, error) {
 	return &NatsRpcDriver{ec: ec}, nil
 }
 
+// NewNatsRpc creates a new instance of the driver using an existing NATS connection.
+func NewNatsRpcFromConn(nc *nats.Conn) (*NatsRpcDriver, error) {
+	ec, err := nats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
+	if err != nil {
+		return nil, err
+	}
+	return &NatsRpcDriver{ec: ec}, nil
+}
+
 // Init initializes the driver via the Graft node.
 func (rpc *NatsRpcDriver) Init(n *Node) (err error) {
 	rpc.node = n
