@@ -71,7 +71,7 @@ func NewNatsRpc(opts *nats.Options) (*NatsRpcDriver, error) {
 	return &NatsRpcDriver{ec: ec}, nil
 }
 
-// NewNatsRpc creates a new instance of the driver using an existing NATS connection.
+// NewNatsRpcFromConn creates a new instance of the driver using an existing NATS connection.
 func NewNatsRpcFromConn(nc *nats.Conn) (*NatsRpcDriver, error) {
 	ec, err := nats.NewEncodedConn(nc, protobuf.PROTOBUF_ENCODER)
 	if err != nil {
