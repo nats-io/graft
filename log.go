@@ -72,7 +72,7 @@ func (n *Node) writeState() error {
 
 	// Set a SHA1 to test for corruption on read
 	env := envelope{
-		SHA:  sha1.New().Sum(buf),
+		SHA:  sha1.Sum(buf),
 		Data: buf,
 	}
 
@@ -99,7 +99,7 @@ func (n *Node) readState(path string) (*persistentState, error) {
 	}
 
 	// Test for corruption
-	sha := sha1.New().Sum(env.Data)
+	sha := sha1.Sum(env.Data)
 	if !bytes.Equal(sha, env.SHA) {
 		return nil, ErrLogCorrupt
 	}
