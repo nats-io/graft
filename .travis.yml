@@ -1,13 +1,13 @@
 language: go
 sudo: false
 go:
-- 1.21.x
-- 1.20.x
+- 1.24.x
+- 1.23.x
 go_import_path: github.com/nats-io/graft
 
 install:
 - go get -t ./...
-- if [[ "$TRAVIS_GO_VERSION" =~ 1.21 ]]; then
+- if [[ "$TRAVIS_GO_VERSION" =~ 1.24 ]]; then
     go install github.com/mattn/goveralls@latest;
     go install github.com/wadey/gocovmerge@latest;
     go install honnef.co/go/tools/cmd/staticcheck@latest;
@@ -17,12 +17,12 @@ install:
 before_script:
 - $(exit $(go fmt ./... | wc -l))
 - go vet ./...
-- if [[ "$TRAVIS_GO_VERSION" =~ 1.21 ]]; then
+- if [[ "$TRAVIS_GO_VERSION" =~ 1.24 ]]; then
     find . -type f -name "*.go" | xargs misspell -error -locale US;
     staticcheck ./...;
   fi
 
 script:
-  - if [[ "$TRAVIS_GO_VERSION" =~ 1.21 ]]; then ./scripts/cov.sh TRAVIS; else go test -race -v -p=1 ./... --failfast -vet=off; fi
+  - if [[ "$TRAVIS_GO_VERSION" =~ 1.24 ]]; then ./scripts/cov.sh TRAVIS; else go test -race -v -p=1 ./... --failfast -vet=off; fi
 after_success:
-  - if [[ "$TRAVIS_GO_VERSION" =~ 1.21 ]]; then $HOME/gopath/bin/goveralls -coverprofile=acc.out -service travis-ci; fi
+  - if [[ "$TRAVIS_GO_VERSION" =~ 1.24 ]]; then $HOME/gopath/bin/goveralls -coverprofile=acc.out -service travis-ci; fi
