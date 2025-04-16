@@ -14,6 +14,8 @@
 package graft
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"os"
 	"testing"
@@ -168,6 +170,101 @@ func TestCorruption(t *testing.T) {
 	}
 	if err != ErrLogCorrupt {
 		t.Fatalf("Expected corrupt error, got %q", err)
+	}
+}
+
+func TestVerification(t *testing.T) {
+	ci := ClusterInfo{Name: "foo", Size: 3}
+	hand, rpc, log := genNodeArgs(t)
+	node, err := New(ci, hand, rpc, log)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	defer node.Close()
+
+	// Delay elections
+	node.mu.Lock()
+	node.electTimer.Reset(10 * time.Second)
+	node.mu.Unlock()
+
+	node.setTerm(1)
+	node.setVote("foo")
+	// Force writing the state
+	node.writeState()
+
+	// We should have written our state.
+	testStateOfNode(t, node)
+
+	// Now introduce some corruption
+	buf, err := os.ReadFile(node.logPath)
+	if err != nil {
+		t.Fatalf("Could not read logfile: %v", err)
+	}
+	env := &envelope{}
+	if err := json.Unmarshal(buf, env); err != nil {
+		t.Fatalf("Error unmarshalling envelope: %v", err)
+	}
+
+	sha := sha1.Sum(env.Data)
+	if have, want := env.SHA, sha[:]; !bytes.Equal(have, want) {
+		t.Errorf("node.writeState().SHA = %x; want %x", have, want)
+	}
+
+	// Make sure we get the corruptError
+	_, err = node.readState(node.logPath)
+	if err != nil {
+		t.Fatal("Unexpected error reading corrupt state")
+	}
+}
+
+func TestVerificationFallback(t *testing.T) {
+	ci := ClusterInfo{Name: "foo", Size: 3}
+	hand, rpc, log := genNodeArgs(t)
+	node, err := New(ci, hand, rpc, log)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	defer node.Close()
+
+	// Delay elections
+	node.mu.Lock()
+	node.electTimer.Reset(10 * time.Second)
+	node.mu.Unlock()
+
+	node.setTerm(1)
+	node.setVote("foo")
+	// Force writing the state
+	node.writeState()
+
+	// We should have written our state.
+	testStateOfNode(t, node)
+
+	// Now introduce some corruption
+	buf, err := os.ReadFile(node.logPath)
+	if err != nil {
+		t.Fatalf("Could not read logfile: %v", err)
+	}
+	env := &envelope{}
+	if err := json.Unmarshal(buf, env); err != nil {
+		t.Fatalf("Error unmarshalling envelope: %v", err)
+	}
+
+	hashOfNothing := sha1.Sum(nil)
+	env.SHA = append(bytes.Clone(env.Data), hashOfNothing[:]...)
+
+	toWrite, err := json.Marshal(env)
+	if err != nil {
+		t.Fatalf("Error Marshaling envelope: %v", err)
+	}
+
+	if err := os.WriteFile(node.logPath, toWrite, 0660); err != nil {
+		t.Fatalf("Error writing envelope: %v", err)
+	}
+
+	// Make sure we get the corruptError
+	_, err = node.readState(node.logPath)
+	if err != nil {
+		t.Fatal("Unexpected error reading corrupt state")
 	}
 }
 

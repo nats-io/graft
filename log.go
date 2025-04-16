@@ -70,12 +70,12 @@ func (n *Node) writeState() error {
 		return err
 	}
 
+	sha := sha1.Sum(buf)
 	// Set a SHA1 to test for corruption on read
 	env := envelope{
-		SHA:  sha1.New().Sum(buf),
+		SHA:  sha[:],
 		Data: buf,
 	}
-
 	toWrite, err := json.Marshal(env)
 	if err != nil {
 		return err
@@ -99,9 +99,18 @@ func (n *Node) readState(path string) (*persistentState, error) {
 	}
 
 	// Test for corruption
-	sha := sha1.New().Sum(env.Data)
-	if !bytes.Equal(sha, env.SHA) {
-		return nil, ErrLogCorrupt
+	sha := sha1.Sum(env.Data)
+	if !bytes.Equal(sha[:], env.SHA) {
+		// Data didn't match the expected digest. Fall back to the old behavior.
+		// Prior to https://github.com/nats-io/graft/pull/39, this code wrongly
+		// used sha1.New().Sum(env.Data).
+		// This mimics that functionality, while being a bit easier to follow.
+		hashOfNothing := sha1.Sum(nil)
+		legacyDigest := append(bytes.Clone(env.Data), hashOfNothing[:]...)
+
+		if !bytes.Equal(legacyDigest, env.SHA) {
+			return nil, ErrLogCorrupt
+		}
 	}
 
 	ps := &persistentState{}
