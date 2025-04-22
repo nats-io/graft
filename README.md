@@ -5,7 +5,7 @@ A RAFT Election implementation in Go. More information on RAFT can be found in t
 ) and this [video](http://www.youtube.com/watch?v=YbZ3zDzDnrw&list=WL20FE97C942825E1E).
 
 [![License Apache 2](https://img.shields.io/badge/License-Apache2-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Build Status](https://travis-ci.com/nats-io/graft.svg?branch=main)](https://app.travis-ci.com/github/nats-io/graft)
+[![Build Status](https://travis-ci.org/nats-io/graft.svg?branch=main)](https://app.travis-ci.com/github/nats-io/graft)
 [![Coverage Status](https://coveralls.io/repos/github/nats-io/graft/badge.svg)](https://coveralls.io/github/nats-io/graft)
 
 Overview
